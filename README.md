@@ -29,5 +29,3 @@ layout:
 ### 目录
 
 <table data-view="cards"><thead><tr><th></th><th></th><th data-hidden data-card-cover data-type="files"></th><th data-hidden></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><strong>阶段一：Go语言核心</strong></td><td></td><td></td><td></td><td><a href="getting-started/quickstart.md">quickstart.md</a></td></tr><tr><td><strong>阶段二：Go Web开发框架</strong></td><td></td><td></td><td></td><td><a href="broken-reference">Broken link</a></td></tr><tr><td><strong>阶段三：Go项目开发</strong></td><td></td><td></td><td></td><td><a href="getting-started/publish-your-docs.md">publish-your-docs.md</a></td></tr></tbody></table>
-
-<div align="left"><figure><img src=".gitbook/assets/ladder.svg" alt="" width="92"><figcaption></figcaption></figure></div>
