@@ -1,5 +1,5 @@
 ---
-icon: hand-wave
+icon: house
 cover: >-
   .gitbook/assets/68747470733a2f2f676f6c616e672e6f72672f646f632f676f706865722f6669766579656172732e6a7067.jpeg
 coverY: 0
@@ -28,4 +28,4 @@ layout:
 
 ### 目录
 
-<table data-view="cards"><thead><tr><th></th><th></th><th data-hidden data-card-cover data-type="files"></th><th data-hidden></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><strong>阶段一：Go语言核心</strong></td><td></td><td></td><td></td><td><a href="getting-started/quickstart.md">quickstart.md</a></td></tr><tr><td><strong>阶段二：Go Web开发框架</strong></td><td></td><td></td><td></td><td><a href="broken-reference">Broken link</a></td></tr><tr><td><strong>阶段三：Go项目开发</strong></td><td></td><td></td><td></td><td><a href="getting-started/publish-your-docs.md">publish-your-docs.md</a></td></tr></tbody></table>
+<table data-view="cards"><thead><tr><th></th><th></th><th data-hidden data-card-cover data-type="files"></th><th data-hidden></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><strong>阶段一：Go语言核心</strong></td><td></td><td></td><td></td><td><a href="getting-started/quickstart.md">quickstart.md</a></td></tr><tr><td><strong>阶段二：Go Web开发框架</strong></td><td></td><td></td><td></td><td><a href="broken-reference/">broken-reference</a></td></tr><tr><td><strong>阶段三：Go项目开发</strong></td><td></td><td></td><td></td><td><a href="getting-started/publish-your-docs.md">publish-your-docs.md</a></td></tr></tbody></table>
