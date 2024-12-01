@@ -1,6 +1,6 @@
 # Table of contents
 
-* [深入Go技术栈](README.md)
+* [主页](README.md)
 
 ## Getting Started
 
