@@ -23,7 +23,7 @@ layout:
 
 * 作者：[Michael.Chow](https://github.com/MichaelChow)
 * 开始编写时间：2024.11.30
-* 在线电子书：[https://go2.gitbook.io/](https://go2.gitbook.io/)
+* 在线电子书：[https://go2.gitbook.io](https://go2.gitbook.io/)
 * 开源电子书项目主页：[https://github.com/MichaelChow/gopher.run](https://github.com/MichaelChow/gopher.run)
 
 ### 目录
