@@ -19,7 +19,7 @@ layout:
     visible: true
 ---
 
-# 深入Go技术栈
+# 主页
 
 * 作者：[Michael.Chow](https://github.com/MichaelChow)
 * 开始编写时间：2024.11.30
