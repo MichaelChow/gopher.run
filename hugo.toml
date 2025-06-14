@@ -1,7 +1,6 @@
 baseURL = 'https://gopher.run/'
 languageCode = 'zh-cn'
 title = 'Gopher Run'
-theme = 'hugo-book'
 
 # 启用 Hugo Module
 [module]
