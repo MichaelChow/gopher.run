@@ -31,41 +31,13 @@ jobs:
           extended: true
 
       - name: Build with Hugo
-        run: |
-          # 清理之前的构建
-          rm -rf public/
-
-          # 构建网站
-          hugo --minify
-
-          # 检查文件大小
-          echo "Checking total size of public directory..."
-          du -sh public/
-
-          # 清理可能的问题文件
-          echo "Cleaning up problematic files..."
-          find ./public -type l -delete
-          find ./public -type f -name "*.html" -exec sed -i 's/href="\/\//href="https:\/\//g' {} \;
-          find ./public -type f -name "*.html" -exec sed -i 's/src="\/\//src="https:\/\//g' {} \;
-
-          # 检查并修复文件权限
-          echo "Fixing file permissions..."
-          find ./public -type f -exec chmod 644 {} \;
-          find ./public -type d -exec chmod 755 {} \;
-
-          # 创建 .nojekyll 文件
-          touch ./public/.nojekyll
-
-          # 再次检查文件大小
-          echo "Final size check:"
-          du -sh public/
+        run: hugo --minify
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: github-pages
           path: ./public
-          retention-days: 1
 
   deploy:
     environment:
@@ -74,12 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: github-pages
-          path: ./public
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
