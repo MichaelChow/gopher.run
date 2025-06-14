@@ -1,0 +1,48 @@
+baseURL = 'https://gopher.run'
+languageCode = 'zh-cn'
+title = 'Gopher Run'
+
+# 启用 Hugo Module
+[module]
+  [[module.imports]]
+    path = "github.com/alex-shpak/hugo-book"
+  [[module.mounts]]
+    source = "content"
+    target = "content"
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "data"
+    target = "data"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "i18n"
+    target = "i18n"
+
+# Book 主题配置
+[params]
+  # 启用搜索功能
+  BookSearch = true
+  # 启用目录
+  BookToC = true
+  # 启用菜单
+  BookMenuBundle = '/menu'
+  # 启用代码高亮和复制功能
+  BookPortableLinks = true
+
+# 菜单配置
+[menu]
+  [[menu.before]]
+    name = "首页"
+    url = "/"
+    weight = 10
+  [[menu.before]]
+    name = "文档"
+    url = "/docs/"
+    weight = 20
