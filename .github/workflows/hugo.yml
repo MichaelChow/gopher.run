@@ -31,13 +31,32 @@ jobs:
           extended: true
 
       - name: Build with Hugo
-        run: hugo --minify
+        run: |
+          # 清理旧的构建文件
+          rm -rf public/
+
+          # 构建站点
+          hugo --minify
+
+          # 修复文件权限
+          chmod -R 644 public/
+          find public/ -type d -exec chmod 755 {} \;
+
+          # 确保所有文件都是普通文件
+          find public/ -type l -delete
+
+          # 检查文件大小
+          du -sh public/
+
+          # 验证构建结果
+          ls -la public/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: github-pages
           path: ./public
+          retention-days: 1
 
   deploy:
     environment:
