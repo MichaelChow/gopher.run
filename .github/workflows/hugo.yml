@@ -38,17 +38,7 @@ jobs:
           # 构建站点
           hugo --minify
 
-          # 修复文件权限
-          chmod -R 644 public/
-          find public/ -type d -exec chmod 755 {} \;
-
-          # 确保所有文件都是普通文件
-          find public/ -type l -delete
-
-          # 检查文件大小
-          du -sh public/
-
-          # 验证构建结果
+          # 检查构建结果
           ls -la public/
 
       - name: Upload artifact
