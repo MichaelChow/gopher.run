@@ -18,43 +18,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
+      # ① 配置 Pages 环境（必须）
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # ② 安装 Hugo
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: "latest"
           extended: true
 
+      # ③ 构建并修正权限
       - name: Build with Hugo
         run: |
-          # 清理旧的构建文件
-          rm -rf public/
-
-          # 构建站点
           hugo --minify
+          chmod -R u+rwX,go+rX public
 
-          # 检查构建结果
-          ls -la public/
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      # ④ 官方上传动作
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          name: github-pages
-          path: ./public
-          retention-days: 1
+          path: ./public # 不要改名字，deploy 动作会自动寻找
 
   deploy:
+    runs-on: ubuntu-latest
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
+      # ⑤ 部署
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
