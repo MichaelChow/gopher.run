@@ -43,7 +43,7 @@ jobs:
 
       # ④ 官方上传动作
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./public # 不要改名字，deploy 动作会自动寻找
 
