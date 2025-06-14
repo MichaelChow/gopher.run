@@ -1,6 +1,7 @@
-baseURL = 'https://gopher.run'
+baseURL = 'https://gopher.run/'
 languageCode = 'zh-cn'
 title = 'Gopher Run'
+theme = 'hugo-book'
 
 # 启用 Hugo Module
 [module]
@@ -27,7 +28,7 @@ title = 'Gopher Run'
 
 # Book 主题配置
 [params]
-  # 启用搜索功能
+  # 禁用搜索功能以减少构建复杂度
   BookSearch = false
   # 启用目录
   BookToC = true
@@ -46,3 +47,10 @@ title = 'Gopher Run'
     name = "文档"
     url = "/docs/"
     weight = 20
+
+[markup]
+  [markup.highlight]
+    style = 'monokai'
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
