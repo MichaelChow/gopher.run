@@ -28,7 +28,7 @@ title = 'Gopher Run'
 # Book 主题配置
 [params]
   # 启用搜索功能
-  BookSearch = true
+  BookSearch = false
   # 启用目录
   BookToC = true
   # 启用菜单
