@@ -1,4 +1,4 @@
-# Gopher Run
+# Gopher
 
 Go 语言学习与分享平台
 
