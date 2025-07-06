@@ -1,6 +1,6 @@
 baseURL = 'https://gopher.run/'
 languageCode = 'zh-cn'
-title = 'Gopher Run'
+title = 'Gopher'
 
 # 启用 Hugo Module
 [module]
@@ -28,7 +28,7 @@ title = 'Gopher Run'
 # Book 主题配置
 [params]
   # 禁用搜索功能以减少构建复杂度
-  BookSearch = false
+  BookSearch = true
   # 启用目录
   BookToC = true
   # 启用菜单
@@ -50,6 +50,11 @@ title = 'Gopher Run'
 [markup]
   [markup.highlight]
     style = 'monokai'
+    lineNos = true
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+  [markup.tableOfContents]
+    startLevel = 1    # 从H1开始
+    endLevel = 4      # 到H4结束
+    ordered = true   # 使用有序列表（数字序号）
