@@ -1,0 +1,9 @@
+// 全宽布局 - 移除Hugo Book主题的默认宽度限制
+.container {
+  max-width: none !important;
+}
+
+// 确保页面内容能够利用全宽
+.book-page {
+  max-width: none !important;
+}

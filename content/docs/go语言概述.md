@@ -1,21 +1,16 @@
 ---
-title: "1.0 Go语言概述"
-description: "关于1.0 Go语言概述的详细说明"
+title: "Go语言概述"
+description: "关于Go语言概述的详细说明"
 date: 2025-07-05T13:25:00Z
 draft: false
 
 ---
 
-# 1.0 Go语言概述
+# Go语言概述
 
-
-💡 推荐学习方法：
-
-- 细读《GO程序设计语言》第1章-入门、第2章-程序结构；该书由Go语言核心团队成员 [Alan A. A. Donovan](https://github.com/adonovan) 和 [K&R](https://en.wikipedia.org/wiki/K%26R) 中的 [Brian W. Kernighan](http://www.cs.princeton.edu/~bwk/) 合作编写。
-- 充分利用Go的标准函数库以**Go语言自己的特性和风格**来编写程序，避免按照自己曾经熟悉的Java风格、Python风格套路，写Go语言程序；避免将现有的C++或Java程序直译为Go程序；
-*[不支持的块类型: *notionapi.TableOfContentsBlock]*
-
-### Go语言的起源
+> 💡 推荐学习方法：
+> - 细读《GO程序设计语言》第1章-入门、第2章-程序结构；该书由Go语言核心团队成员 [Alan A. A. Donovan](https://github.com/adonovan) 和 [K&R](https://en.wikipedia.org/wiki/K%26R) 中的 [Brian W. Kernighan](http://www.cs.princeton.edu/~bwk/) 合作编写。
+> - 充分利用Go的标准函数库以**Go语言自己的特性和风格**来编写程序，避免按照自己曾经熟悉的Java风格、Python风格套路，写Go语言程序；避免将现有的C++或Java程序直译为Go程序；
 
 **为什么一门语言是这样子的**：编程语言的演化跟**生物物种的演化**类似，一个成功的编程语言的后代一般都会继承它们祖先的优点；当然有时**多种语言杂合**也可能会产生**令人惊讶的特性**；还有一些**激进的新特性**可能并没有先例。
 

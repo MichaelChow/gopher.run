@@ -1,6 +1,6 @@
 # Hugo 默认输出目录
 /public/
-/resources/_gen/
+/resources/
 /assets/jsconfig.json
 hugo_stats.json
 
@@ -16,3 +16,10 @@ hugo_stats.json
 # 系统文件
 .DS_Store
 Thumbs.db 
+
+# 文档
+prompt.md
+hugo-config-guide.md
+
+# 工具
+notion2hugo/

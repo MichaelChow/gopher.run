@@ -6,24 +6,6 @@ title = 'Gopher'
 [module]
   [[module.imports]]
     path = "github.com/alex-shpak/hugo-book"
-  [[module.mounts]]
-    source = "content"
-    target = "content"
-  [[module.mounts]]
-    source = "static"
-    target = "static"
-  [[module.mounts]]
-    source = "layouts"
-    target = "layouts"
-  [[module.mounts]]
-    source = "data"
-    target = "data"
-  [[module.mounts]]
-    source = "assets"
-    target = "assets"
-  [[module.mounts]]
-    source = "i18n"
-    target = "i18n"
 
 # Book 主题配置
 [params]
@@ -42,14 +24,10 @@ title = 'Gopher'
     name = "首页"
     url = "/"
     weight = 10
-  [[menu.before]]
-    name = "文档"
-    url = "/docs/"
-    weight = 20
 
 [markup]
   [markup.highlight]
-    style = 'monokai'
+    style = 'dracula'
     lineNos = true
   [markup.goldmark]
     [markup.goldmark.renderer]
@@ -57,4 +35,4 @@ title = 'Gopher'
   [markup.tableOfContents]
     startLevel = 1    # 从H1开始
     endLevel = 4      # 到H4结束
-    ordered = true   # 使用有序列表（数字序号）
+    ordered = false   # 禁用有序列表（数字序号）

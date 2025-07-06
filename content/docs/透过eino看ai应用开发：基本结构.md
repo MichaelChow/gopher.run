@@ -8,7 +8,7 @@ draft: false
 
 # 透过Eino看AI应用开发：基本结构
 
-## 一、AI应用的本质
+# 一、AI应用的本质
 
 > 🎯 核心洞察：AI应用的本质是围绕大模型的信息流：Input（原始信息） → Process（大模型） → Output(最终信息)
 
@@ -67,7 +67,7 @@ draft: false
 
 
 
-# 二、**Eino的整体结构**
+# 二、Eino的整体结构
 
 > 💡 **开源社区优秀的AI应用开发框架**
 > - [https://github.com/langchain-ai/langchain](https://github.com/langchain-ai/langchain) & [https://github.com/langchain-ai/langgraph](https://github.com/langchain-ai/langgraph)（python/js）
