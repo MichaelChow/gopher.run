@@ -24,6 +24,16 @@ cd gopher.run
 # 安装依赖
 go mod download
 
+hugo mod get -u
+
+hugo mod tidy
+
+hugo mod graph
+
+hugo --gc
+
+hugo --minify
+
 # 启动开发服务器
 hugo server -D
 ```

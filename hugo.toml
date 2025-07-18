@@ -17,6 +17,8 @@ title = 'Gopher'
   BookMenuBundle = '/menu'
   # 启用代码高亮和复制功能
   BookPortableLinks = true
+  # 菜单排序方式
+  BookMenuSort = 'weight'
 
 # 菜单配置
 [menu]
