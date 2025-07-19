@@ -10,6 +10,7 @@ weight: 2000
 - 计算机底层全是bit，而**实际操作则是基于大小固定的单元中的数值，称为字（word），****如整数、浮点数、比特数组、内存地址****等**；进而构成更大的聚合类型；Go的数据类型宽泛，向下匹配硬件特性，向上满足程序员所需；
 - Go语言将数据类型分为四类：
     | **基础类型（basic type）** | number、boolean、string，是Go语言世界数据的原子。 | 
+    | --- | --- | 
     | **组合类型（aggregate type）** | array**、**struct，由基础类型组合，值由内存中的一组变量构成，是Go语言世界数据的分子。 | 
     | **引用类型（reference type）** | pointer、slice、map、function、**channel**，都**是间接指向****程序变量或状态，**操作所引用数据的全部效果会遍及该数据的全部引用； | 
     | **接口类型（interface type）** | interface | 

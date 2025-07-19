@@ -173,6 +173,7 @@ func Min(a ...int) int {
 
 
 |   |   | 
+| --- | --- | 
 | printf |   | 
 | println |   | 
 | Fprintf |   | 
