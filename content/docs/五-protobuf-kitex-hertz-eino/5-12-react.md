@@ -23,7 +23,7 @@ weight: 5012
 
 [论文][代码][博客][BibTeX]
 
-![](https://react-lm.github.io/files/diagram.png)
+![](/images/23324637-29b5-8050-a76f-d9e5c73ca2f7/image_23324637-29b5-80b0-95cc-ecb84e3bee5f.jpg)
 
 Language models are getting better at reasoning (e.g. chain-of-thought prompting) and acting (e.g. WebGPT, SayCan, ACT-1), but these two directions have remained separate.语言模型在推理（例如：链式思考提示）和行动（例如：WebGPT, SayCan, ACT-1）方面变得越来越好，但这两个方向一直保持独立。**ReAct asks, what if these two fundamental capabilities are combined?ReAct 提问，如果将这两种基本能力结合起来会怎样？**
 
@@ -35,23 +35,23 @@ While large language models (LLMs) have demonstrated impressive capabilities acr
 
 A ReAct prompt consists of few-shot task-solving trajectories, with human-written text reasoning traces and actions, as well as environment observations in response to actions (see examples in paper appendix!)ReAct 提示由少量示例任务解决轨迹组成，包含人类撰写的文本推理痕迹和动作，以及对动作的环境观察（见论文附录中的示例！）ReAct prompting is intuitive and flexible to design, and achieves state-of-the-art few-shot performances across a variety of tasks, from question answering to online shopping!ReAct 提示设计直观且灵活，能够在各种任务中实现最先进的少量示例性能，从问答到在线购物！
 
-![](https://react-lm.github.io/files/results.png)
+![](/images/23324637-29b5-8050-a76f-d9e5c73ca2f7/image_23324637-29b5-8052-a652-d6870adf7a1a.jpg)
 
 ### **HotpotQA Example HotpotQA 示例**
 
 The reason-only baseline (i.e. chain-of-thought) suffers from misinformation (in red) as it is not grounded to external environments to obtain and update knowledge, and has to rely on limited internal knowledge.仅推理基线（即思维链）会受到误导信息（用红色标注）的影响，因为它不依赖外部环境来获取和更新知识，只能依靠有限的内部知识。The act-only baseline suffers from the lack of reasoning, unable to synthesize the final answer despite having the same actions and observation as ReAct in this case.仅执行基线缺乏推理能力，即使在这种情况下拥有与 ReAct 相同的操作和观察，也无法综合得出最终答案。In contrast, ReAct solves the task with a interpretable and factual trajectory.相比之下，ReAct 通过可解释且符合事实的轨迹解决了任务。
 
-![](https://react-lm.github.io/files/hotpotqa.png)
+![](/images/23324637-29b5-8050-a76f-d9e5c73ca2f7/image_23324637-29b5-802a-9123-e3b95f621a2a.jpg)
 
 ### **ALFWorld Example ALFWorld 示例**
 
 For decision making tasks, we design human trajectories with sparse reasoning traces, letting the LM decide when to think vs. act.对于决策任务，我们设计了包含稀疏推理痕迹的人类轨迹，让语言模型决定何时思考而非行动。ReAct isn't perfect --- below is a failure example on ALFWorld. However, ReAct format allows easy human inspection and behavior correction by changing a couple of model thoughts, an exciting novel approach to human alignment!ReAct 并不完美——下面是一个在 ALFWorld 中的失败示例。然而，ReAct 格式允许通过更改几个模型的想法进行简单的手动检查和行为修正，这是一种令人兴奋的新方法，用于实现与人类的对齐！
 
-![](https://react-lm.github.io/files/alfworld.png)
+![](/images/23324637-29b5-8050-a76f-d9e5c73ca2f7/image_23324637-29b5-80c7-bfc4-f74d7520dc16.jpg)
 
 ## **ReAct Finetuning: Initial ResultsReAct 微调：初步结果**
 
 Prompting has limited context window and learning support. Initial finetuning results on HotpotQA using ReAct prompting trajectories suggest: (1) ReAct is the best fintuning format across model sizes; (2) ReAct finetuned smaller models outperform prompted larger models!提示的上下文窗口和学习支持有限。使用 ReAct 提示轨迹对 HotpotQA 进行初始微调结果表明：（1）ReAct 是各种模型大小的最佳微调格式；（2）微调的小模型优于提示的大模型！
 
-![](https://react-lm.github.io/files/hotpot_finetune.png)
+![](/images/23324637-29b5-8050-a76f-d9e5c73ca2f7/image_23324637-29b5-80fb-be2c-d2fc6bc3b14b.jpg)
 

@@ -1,5 +1,5 @@
 ---
-title: "欢迎来到Gopher学习平台"
+title: "Gopher学习平台"
 type: docs
 ---
 

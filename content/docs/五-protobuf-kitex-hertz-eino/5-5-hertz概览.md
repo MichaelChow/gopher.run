@@ -19,7 +19,7 @@ weight: 5005
 
 Hertz [həːts，即物理学家赫兹] 是字节跳动开源的 Go 微服务 HTTP 框架，在设计之初参考了其他开源框架[gin](https://github.com/gin-gonic/gin)（公司内部二次开发的ginx)、 [fasthttp](https://github.com/valyala/fasthttp)、[echo](https://github.com/labstack/echo) 的优势， 并结合字节跳动内部的需求，使其具有高易用性、高性能、高扩展性等特点，目前在字节跳动内部已广泛使用。 如今越来越多的微服务选择使用 Golang，如果对微服务性能有要求，又希望框架能够充分满足内部的可定制化需求，Hertz 会是一个不错的选择。
 
-![](https://prod-files-secure.s3.us-west-2.amazonaws.com/3bd3cf7e-0f8f-40af-acf7-9f45a802bdba/9056ea8c-67ab-4793-a4af-4015fedce613/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZI2LB4665ZFLVIS4%2F20250719%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250719T005346Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEID%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLXdlc3QtMiJGMEQCICtNHdqb%2BNfUi64IMHkVdqz5lm0x1%2Fv6Nkwpv6QeXQJKAiBdWt7JNU0cUEbpohk6uxDnjwmaG%2BV25g1Wqa8SwmVmuCqIBAiZ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAAaDDYzNzQyMzE4MzgwNSIMwQBnvqrUK5IGlopaKtwDLzjABtLUmjMIAzRKoeeV3zHC6MaVhGJPueC9Dt0o5s%2F%2FFQFvuUFadMLmrbvxTutQH4KXb3XratRfx5gHAoAKhKHelNvCkSyUbHC37IIlMJfrPxH9Kwt8I6y8QsbXCJg21w0xCHlkZyE6uhbVxuyROl9oClmFvfNiir0BZizdSov0eZaEnSQCECmVm2KJenOwLDtTquSK6JlZ98tP93TNJIFs%2BXdhCSeKFZG7a9QZVKj%2BUb4NvHwdzJ%2FJLZSc1qb%2B9p%2BA2cYuwxg5GN44S9VTv3IYRB7JM%2BERjn2pT3%2BC24Z73Cg1lhGPvvW072jY9O5of1efSrQIlKLkLYzUQdyyVmLPqdfYM%2BQFZNsGXvPvUUFgIT3n8HCWtuku%2FrLg3gGV5H0YN1kj%2Fy0o4HvO6wcSG7SPJPVcAt14kZ691xlARiGcvp8X7cQsLTMwQ4VPPr%2F1DJCO8IZn3iBCnVbydhx2i2nYk01fSZqEyViXIkutlyIaGmrBJ1aZaTPhgMt0dsXdA8R3iklolcrc%2FluKUkkg0rQIeU6T6EViNMmsdm57egY1d23%2BJ48Ar9NUtycLGpEcFp0vU9iKo6BTTsi6ZfkNq3rXPHutlzXYWm7MptGfLhdxhpdwejFCO7NycFcw%2BbrrwwY6pgHuMGW%2FEkwThNlwkfArBuWKTp5%2FP5WRglauXgEr4aNUbrAMbM7MtBW6E1mWphIoNusxGL8QXlH7yXYFbK8S89SGyqfAZXETXxl2ESGfGZmhxJGxd4MEIDKihrijwbYByDSmrsrYGrEe%2FYaJSOp5SpAthbWx%2Fbf5iETN3rKNJTv9dVIAAaOXldvJ%2B0jwIW6XQEDYbqEe8%2FsdqchR6vXmX9gMJ1NE3Y63&X-Amz-Signature=970ff949244735df9dfdb93efb2aa4f5e4489a2b06661ea01507b6835197cac0&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject)
+![](/images/1b324637-29b5-802f-aee7-f3ba0f0e2313/image_1b424637-29b5-8073-ac2e-e1a617fcba27.jpg)
 
 
 
@@ -28,9 +28,9 @@ Hertz [həːts，即物理学家赫兹] 是字节跳动开源的 Go 微服务 HT
 - **高易用性**：在开发过程中，快速写出来正确的代码往往是更重要的。因此，在 Hertz 在迭代过程中，积极听取用户意见，持续打磨框架，希望为用户提供一个更好的使用体验，帮助用户更快的写出正确的代码。
 - **高性能**：Hertz 默认使用自研的高性能网络库 Netpoll，在一些特殊场景相较于 go net，Hertz 在 QPS、时延上均具有一定优势。关于性能数据，可参考下图 Echo 数据。
     四个框架的对比:
-    ![](https://www.cloudwego.io/img/docs/hertz-performance-4.png)
+    ![](/images/1b324637-29b5-802f-aee7-f3ba0f0e2313/image_1b424637-29b5-802d-8e32-c8348cae4880.jpg)
     三个框架的对比:
-    ![](https://www.cloudwego.io/img/docs/hertz-performance-3.png)
+    ![](/images/1b324637-29b5-802f-aee7-f3ba0f0e2313/image_1b424637-29b5-8045-ad48-f4aecf0887fa.jpg)
     关于详细的性能数据，可参考 [https://github.com/cloudwego/hertz-benchmark](https://github.com/cloudwego/hertz-benchmark)。
 - **高扩展性：**Hertz 采用了分层设计，提供了较多的接口以及默认的扩展实现，用户也可以自行扩展。同时得益于框架的分层设计，框架的扩展性也会大很多。目前仅将稳定的能力开源给社区，更多的规划参考 [RoadMap](https://github.com/cloudwego/hertz/blob/main/ROADMAP.md)。
 - **多协议支持：**Hertz 框架原生提供 HTTP1.1、ALPN 协议支持。除此之外，由于分层设计，Hertz 甚至支持自定义构建协议解析逻辑，以满足协议层扩展的任意需求。
@@ -264,5 +264,5 @@ service NewService {
 
 path不存在时，返回：`404 page not found`
 
-![](https://prod-files-secure.s3.us-west-2.amazonaws.com/3bd3cf7e-0f8f-40af-acf7-9f45a802bdba/a9e5959c-ff8f-4e90-a22f-5de5c6f19bed/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZI2LB4665ZFLVIS4%2F20250719%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20250719T005346Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEID%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLXdlc3QtMiJGMEQCICtNHdqb%2BNfUi64IMHkVdqz5lm0x1%2Fv6Nkwpv6QeXQJKAiBdWt7JNU0cUEbpohk6uxDnjwmaG%2BV25g1Wqa8SwmVmuCqIBAiZ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAAaDDYzNzQyMzE4MzgwNSIMwQBnvqrUK5IGlopaKtwDLzjABtLUmjMIAzRKoeeV3zHC6MaVhGJPueC9Dt0o5s%2F%2FFQFvuUFadMLmrbvxTutQH4KXb3XratRfx5gHAoAKhKHelNvCkSyUbHC37IIlMJfrPxH9Kwt8I6y8QsbXCJg21w0xCHlkZyE6uhbVxuyROl9oClmFvfNiir0BZizdSov0eZaEnSQCECmVm2KJenOwLDtTquSK6JlZ98tP93TNJIFs%2BXdhCSeKFZG7a9QZVKj%2BUb4NvHwdzJ%2FJLZSc1qb%2B9p%2BA2cYuwxg5GN44S9VTv3IYRB7JM%2BERjn2pT3%2BC24Z73Cg1lhGPvvW072jY9O5of1efSrQIlKLkLYzUQdyyVmLPqdfYM%2BQFZNsGXvPvUUFgIT3n8HCWtuku%2FrLg3gGV5H0YN1kj%2Fy0o4HvO6wcSG7SPJPVcAt14kZ691xlARiGcvp8X7cQsLTMwQ4VPPr%2F1DJCO8IZn3iBCnVbydhx2i2nYk01fSZqEyViXIkutlyIaGmrBJ1aZaTPhgMt0dsXdA8R3iklolcrc%2FluKUkkg0rQIeU6T6EViNMmsdm57egY1d23%2BJ48Ar9NUtycLGpEcFp0vU9iKo6BTTsi6ZfkNq3rXPHutlzXYWm7MptGfLhdxhpdwejFCO7NycFcw%2BbrrwwY6pgHuMGW%2FEkwThNlwkfArBuWKTp5%2FP5WRglauXgEr4aNUbrAMbM7MtBW6E1mWphIoNusxGL8QXlH7yXYFbK8S89SGyqfAZXETXxl2ESGfGZmhxJGxd4MEIDKihrijwbYByDSmrsrYGrEe%2FYaJSOp5SpAthbWx%2Fbf5iETN3rKNJTv9dVIAAaOXldvJ%2B0jwIW6XQEDYbqEe8%2FsdqchR6vXmX9gMJ1NE3Y63&X-Amz-Signature=93d4a47f56f25dfbcf94141c33a1dd574fb0ac37695b4397894c701e8a85c88d&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject)
+![](/images/1b324637-29b5-802f-aee7-f3ba0f0e2313/image_1b724637-29b5-8037-b94e-dde40dba5e48.jpg)
 
