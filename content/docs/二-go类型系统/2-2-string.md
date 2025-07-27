@@ -421,3 +421,9 @@ y, err := strconv.ParseInt("123", 10, 64) // base 10, up to 64 bits
 // 有时候也会使用fmt.Scanf来解析输入的字符串和数字，特别是当字符串和数字混合在一行的时候，它可以灵活处理不完整或不规则的输入。
 ```
 
+
+
+
+
+[https://go.dev/blog/strings](https://go.dev/blog/strings)
+

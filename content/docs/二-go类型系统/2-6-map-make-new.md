@@ -7,6 +7,43 @@ weight: 2006
 
 # 2.6 map、make、new
 
+
+
+- make: 内建函数，仅限于分配并初始化一个 **slice、map、chan类型** 的对象，make返回Type，new返回*Type
+    ```go
+    // The make built-in function allocates and initializes an object of type
+    // slice, map, or chan (only). Like new, the first argument is a type, not a
+    // value. Unlike new, make's return type is the same as the type of its
+    // argument, not a pointer to it. The specification of the result depends on
+    // the type:
+    //
+    //   - Slice: The size specifies the length. The capacity of the slice is
+    //     equal to its length. A second integer argument may be provided to
+    //     specify a different capacity; it must be no smaller than the
+    //     length. For example, make([]int, 0, 10) allocates an underlying array
+    //     of size 10 and returns a slice of length 0 and capacity 10 that is
+    //     backed by this underlying array.
+    //   - Map: An empty map is allocated with enough space to hold the
+    //     specified number of elements. The size may be omitted, in which case
+    //     a small starting size is allocated.
+    //   - Channel: The channel's buffer is initialized with the specified
+    //     buffer capacity. If zero, or the size is omitted, the channel is
+    //     unbuffered.
+    func make(t Type, size ...IntegerType) Type
+    // The new built-in function allocates memory. The first argument is a type,
+    // not a value, and the value returned is a pointer to a newly
+    // allocated zero value of that type.
+    func new(Type) *Type
+    ```
+
+
+- Map(映射)：分配一个空映射，并有足够的空间来容纳指定数量的元素。size参数可以省略，此时会分配一个较小的初始大小。map是随机顺序；
+    - **map**存储了键/值（key/value）的集合，对集合元素，提供常数时间的存、取或测试操作。键可以是任意类型，只要其值能用`==`运算符比较，最常见的例子是字符串；值则可以是任意类型。这个例子中的键是字符串，值是整数。
+    - **内置函数 **`make`** 创建空 **`map`（译注：从功能和实现上说**，**`Go`** 的 **`map`** 类似于 **`Java`** 语言中的 **`HashMap`**，Python 语言中的 **`dict`，`Lua` 语言中的`table`，通常使用`hash`实现。遗憾的是，对于该词的翻译并不统一，**数学界术语为映射（**注释：如MyBatis中的Mapper**），**而计算机界众说纷纭莫衷一是。为了防止对读者造成误解，保留不译。
+    - `map`中不存在某个键时不用担心，首次读到新行时，等号右边的表达式`counts[line]`的值将被**计算为其类型的零值**，对于`int`即`0`。
+    - `map`的迭代顺序并不确定：从实践来看，**该顺序随机，每次运行都会变化**(实测是这样)。这种设计是有意为之的，因为**能防止开发的程序依赖特定遍历顺序**，而这是无法保证的。（译注：具体可以参见这里[https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order](https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order)）map的顺序取决于使用的hash函数，hash函数为了修复DOS拒绝服务攻击做了随机化处理。[https://github.com/golang/go/issues/2630](https://github.com/golang/go/issues/2630)。
+
+
 - 哈希表（map）是一种巧妙并且实用的数据结构，它是一个**无序的key/value对的集合**，其所有的key都是不同的，然后通过给定的key可以在**常数时间复杂度内检索、更新或删除对应的value**。
 - 在Go语言中，一个map map[K]V，就是**一个哈希表的引用（引用类型）**，其中K和V分别对应key和value。map中所有的key都有相同的类型，所有的value也有着相同的类型，但key和value之间可以是不同的数据类型。
     - K对应的key必须是支持==比较运算符的数据类型（所以map可以通过测试key是否相等来判断是否已经存在）。虽然浮点数类型也是支持相等运算符比较的，但是将浮点数用做key类型则是一个坏的想法，正如第三章提到的，最坏的情况是可能出现的NaN和任何浮点数都不相等。

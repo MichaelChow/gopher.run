@@ -20,11 +20,10 @@ weight: 2000
 
 - [2.1 number、boolean](2-1-number-boolean/)
 - [2.2 string](2-2-string/)
-- [2.3 const、iota、init](2-3-const-iota-init/)
 - [2.4 array、slice、append](2-4-array-slice-append/)
 - [2.5 pointer](2-5-pointer/)
 - [2.6 map、make、new](2-6-map-make-new/)
-- [2.7 泛型](2-7-泛型/)
+- [2.7 泛型 generics](2-7-泛型-generics/)
 - [2.8 struct、组合嵌套、json](2-8-struct-组合嵌套-json/)
 - [2.9 func declaration、递归、多值返回、可变参数](2-9-func-declaration-递归-多值返回-可变参数/)
 - [2.10 函数变量、匿名函数、闭包](2-10-函数变量-匿名函数-闭包/)
@@ -32,8 +31,6 @@ weight: 2000
 - [2.12 method declaration、指针接收者、struct组合嵌套、封装](2-12-method-declaration-指针接收者-struct组合嵌套-封装/)
 - [2.13 interface type、实现、interface变量的值、interface的类型断言](2-13-interface-type-实现-interface变量的值-interface的类型断言/)
 - [2.14 常用interface](2-14-常用interface/)
-
-
 
 
 
