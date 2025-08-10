@@ -1,0 +1,54 @@
+{{ if .Site.Params.googleAnalytics }}
+<!-- 智能统计选择器 -->
+<script>
+    (function () {
+        'use strict';
+
+        const gaId = '{{ .Site.Params.googleAnalytics }}';
+        const baiduId = '{{ .Site.Params.baiduAnalytics }}';
+
+        // 加载Google Analytics
+        function loadGA() {
+            const script = document.createElement('script');
+            script.async = true;
+            script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+
+            script.onload = () => {
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = function () { dataLayer.push(arguments); };
+
+                gtag('js', new Date());
+                gtag('config', gaId);
+                gtag('event', 'page_view');
+                console.log('Google Analytics加载成功');
+            };
+
+            script.onerror = () => {
+                console.log('GA加载失败，切换到百度统计');
+                if (baiduId?.trim()) loadBaidu();
+            };
+
+            document.head.appendChild(script);
+        }
+
+        // 加载百度统计
+        function loadBaidu() {
+            if (!baiduId?.trim()) return;
+
+            window._hmt = window._hmt || [];
+            const script = document.createElement('script');
+            script.src = `https://hm.baidu.com/hm.js?${baiduId}`;
+            script.onload = () => {
+                _hmt.push(['_trackPageview']);
+                console.log('百度统计加载成功');
+            };
+            script.onerror = () => console.log('百度统计加载失败');
+
+            document.head.appendChild(script);
+        }
+
+        // 延迟加载，避免阻塞页面渲染
+        setTimeout(loadGA, 1000);
+    })();
+</script>
+{{ end }}

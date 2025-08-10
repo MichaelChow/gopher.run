@@ -19,6 +19,10 @@ title = 'Gopher'
   BookPortableLinks = true
   # 菜单排序方式
   BookMenuSort = 'weight'
+  
+  # 统计配置
+  googleAnalytics = "G-GRTKGSD4NB"
+  baiduAnalytics = "9529a43167a33da2d347bf338f17f65b"  
 
 # 菜单配置
 [menu]

@@ -1,0 +1,32 @@
+{{ if .Site.Params.googleAnalytics }}
+<!-- 自定义事件跟踪 -->
+<script>
+    (function () {
+        'use strict';
+
+        // 跟踪页面滚动深度
+        let maxScroll = 0;
+        window.addEventListener('scroll', () => {
+            const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+            if (scrollPercent > maxScroll && scrollPercent % 25 === 0) {
+                maxScroll = scrollPercent;
+                gtag('event', 'scroll_depth', {
+                    'event_category': 'engagement',
+                    'event_label': document.title,
+                    'value': maxScroll
+                });
+            }
+        });
+
+        // 跟踪代码块复制
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-to-clipboard')) {
+                gtag('event', 'copy_code', {
+                    'event_category': 'engagement',
+                    'event_label': document.title
+                });
+            }
+        });
+    })();
+</script>
+{{ end }}

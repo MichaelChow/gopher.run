@@ -23,3 +23,6 @@ hugo-config-guide.md
 
 # 工具
 notion2hugo/
+
+# Hugo 模块缓存
+_vendor/
