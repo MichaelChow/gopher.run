@@ -1,11 +1,11 @@
 ---
-title: "五、Protobuf/KiteX/HertZ/Eino"
+title: "五、Go后端应用开发"
 date: 2025-04-24T00:10:00Z
 draft: false
 weight: 5000
 ---
 
-# 五、Protobuf/KiteX/HertZ/Eino
+# 五、Go后端应用开发
 
 
 
@@ -21,13 +21,7 @@ weight: 5000
 - [5.8 gorm](5-8-gorm/)
 - [5.9 微服务间通信](5-9-微服务间通信/)
 - [5.9 编码规范](5-9-编码规范/)
-- [5.10 透过Eino看AI应用开发](5-10-透过eino看ai应用开发/)
-- [5.11 透过Eino Assistant看AI应用开发：快速上手](5-11-透过eino-assistant看ai应用开发-快速上手/)
-- [5.12 ReAct](5-12-react/)
-
-
-
-
+- [5.10 微服务观测](5-10-微服务观测/)
 
 
 

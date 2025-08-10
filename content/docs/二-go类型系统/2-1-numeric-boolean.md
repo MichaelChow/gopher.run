@@ -1,11 +1,11 @@
 ---
-title: "2.1 number、boolean"
+title: "2.1 numeric、boolean"
 date: 2024-12-19T00:59:00Z
 draft: false
 weight: 2001
 ---
 
-# 2.1 number、boolean
+# 2.1 numeric、boolean
 
 # number
 
