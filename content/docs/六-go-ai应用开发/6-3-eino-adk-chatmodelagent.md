@@ -11,14 +11,234 @@ weight: 6003
 
 > [https://github.com/cloudwego/eino-examples](https://github.com/cloudwego/eino-examples): 提供了实用的示例来帮助上手基于Eino的AI应用开发
 
-
-
-## 一、**Eino ADK:**图书推荐 **ChatModelAgent**
+## 一、**ChatModelAgent**
 
 > doc：[https://www.cloudwego.io/zh/docs/eino/core_modules/eino_adk/eino-adk-agent-实现/eino-adk-chatmodelagent/](https://www.cloudwego.io/zh/docs/eino/core_modules/eino_adk/eino-adk-agent-%E5%AE%9E%E7%8E%B0/eino-adk-chatmodelagent/)
-code：[github.com/cloudwego/eino-examples/adk/intro/chatmodel](http://github.com/cloudwego/eino-examples/adk/intro/chatmodel)
 
-> 💡 **ChatModelAgent**：Eino ADK 中的一个核心预构建 的 Agent，它封装了与大语言模型（LLM）进行交互、并支持使用工具来完成任务的复杂逻辑。
+> code：[github.com/cloudwego/eino-examples/adk/intro/chatmodel](http://github.com/cloudwego/eino-examples/adk/intro/chatmodel)
+
+
+
+**ChatModelAgent：**
+
+一个核心预构建的Agent，封装了ChatModel、tool。
+
+```go
+// eino/adk/chatmodel.go
+type ChatModelAgent struct {
+	name        string
+	description string
+	instruction string
+
+	model       model.ToolCallingChatModel
+	toolsConfig ToolsConfig  
+
+	genModelInput GenModelInput
+
+	outputKey string
+	maxStep   int
+
+	subAgents   []Agent
+	parentAgent Agent
+
+	disallowTransferToParent bool
+
+	exit tool.BaseTool
+
+	// runner
+	once   sync.Once
+	run    runFunc
+	frozen uint32
+}
+```
+
+
+
+**ChatModelAgentConfig：**
+
+<!-- 列布局开始 -->
+
+```go
+// eino/adk/chatmodel.go
+type ChatModelAgentConfig struct {
+	Name        string
+	Description string
+	Instruction string
+
+	Model model.ToolCallingChatModel
+
+	**ToolsConfig** ToolsConfig
+
+	// optional
+	**GenModelInput** GenModelInput
+
+	// Exit tool. Optional, defaults to nil, which will generate an Exit Action.
+	// The built-in implementation is 'ExitTool'
+	Exit tool.BaseTool
+
+	// optional
+	OutputKey string
+
+	MaxStep int
+}
+```
+
+
+---
+
+![](/images/22524637-29b5-80e9-84e8-ff0346e83856/image_24824637-29b5-80ce-99e3-fdb27b582776.jpg)
+
+<!-- 列布局结束 -->
+
+**ToolsConfig：**
+
+复用了 Eino Graph的compose.ToolsNodeConfig，详细参考：[Eino: ToolsNode&Tool 使用说明](https://www.cloudwego.io/zh/docs/eino/core_modules/components/tools_node_guide)。并额外提供了 ReturnDirectly 配置，ChatModelAgent 调用配置在 ReturnDirectly 中的 Tool 后会直接退出。
+
+为 ChatModelAgent 配置了 ToolsConfig 后，它在内部的执行流程就遵循了 ReAct 模式：调用 ChatModel（Reason）、chatModel 返回工具调用请求（Action）、ChatModelAgent 执行工具（Act）
+
+执行循环直到 ChatModel 判断不需要调用 Tool 结束。
+
+**当没有配置工具时，ChatModelAgent 退化为一次 ChatModel 调用。**
+
+```go
+// github.com/cloudwego/eino/adk/chatmodel.go
+
+type ToolsConfig struct {
+    compose.ToolsNodeConfig
+
+    // Names of the tools that will make agent return directly when the tool is called.
+    // When multiple tools are called and more than one tool is in the return directly list, only the first one will be returned.
+    ReturnDirectly map[string]bool
+}
+```
+
+
+
+**GenModelInput:**
+
+Agent 被调用时会使用该方法生成 ChatModel 的初始输入：
+
+```go
+type GenModelInput func(ctx context.Context, instruction string, input *AgentInput) ([]Message, error)
+```
+
+Agent 提供了默认的 GenModelInput 方法：
+
+1. 将 Instruction 作为 system message 加到 AgentInput.Messages 前
+1. 以 SessionValues 为 variables 渲染 1 中得到的 message list
+
+
+**OutputKey：**
+
+配置后 Agent 产生的最后一个 message 会被以设置的 OutputKey 为 key 添加到 SessionValues 中。
+
+
+
+**Exit：**
+
+效果类似 ToolReturnDirectly。当 chatModel 调用这个工具后并执行后，ChatModelAgent 将直接退出。
+
+```go
+// github.com/cloudwego/eino/adk/chatmodel.go
+
+type ExitTool struct{}
+
+func (et ExitTool) Info(_ context.Context) (*schema.ToolInfo, error) {
+    return ToolInfoExit, nil
+}
+
+func (et ExitTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
+    type exitParams struct {
+       FinalResult string `json:"final_result"`
+    }
+
+    params := &exitParams{}
+    err := sonic.UnmarshalString(argumentsInJSON, params)
+    if err != nil {
+       return "", err
+    }
+
+    err = SendToolGenAction(ctx, "exit", NewExitAction())
+    if err != nil {
+       return "", err
+    }
+
+    return params.FinalResult, nil
+}
+```
+
+
+
+**Transfer:**
+
+使用 SetSubAgents 为 ChatModelAgent 设置父或子 Agent 后，ChatModelAgent 会增加一个 Transfer Tool，并且在 prompt 中指示 ChatModel 在需要 transfer 时调用这个 Tool 并以 transfer 目标 AgentName 作为 Tool 输入。在此工具被调用后，Agent 会产生 TransferAction 并退出。
+
+
+
+**AgentTool:**
+
+方便地将 Eino ADK Agent 转化为 Tool 供 ChatModelAgent 调用:
+
+```go
+// github.com/cloudwego/eino/adk/agent_tool.go
+
+func NewAgentTool(_ context.Context, agent Agent, options ...AgentToolOption) tool.BaseTool
+```
+
+
+
+如把之前创建的 `BookRecommendAgent` 转换为 Tool
+
+```go
+bookRecommender := NewBookRecommendAgent()
+bookRecommendeTool := NewAgentTool(ctx, bookRecommender)
+
+// other agent
+a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+    // xxx
+    ToolsConfig: adk.ToolsConfig{
+        ToolsNodeConfig: compose.ToolsNodeConfig{
+            Tools: []tool.BaseTool{bookRecommendeTool},
+        },
+    },
+})
+```
+
+
+
+**Interrupt&Resume：**
+
+复用了 Eino Graph 的 Interrupt&Resume 能力。
+
+```go
+// github.com/cloudwego/eino/adk/interrupt.go
+
+func NewInterruptAndRerunErr(extra any) error
+```
+
+定义 ToolOption 来在恢复时传递新输入：(非必须，实践时也可以根据 context、闭包等其他方式传递新输入)
+
+```go
+import (
+    "github.com/cloudwego/eino/components/tool"
+)
+
+type askForClarificationOptions struct {
+    NewInput *string
+}
+
+func WithNewInput(input string) tool.Option {
+    return tool.WrapImplSpecificOptFn(func(t *askForClarificationOptions) {
+       t.NewInput = &input
+    })
+}
+```
+
+工具 `ask_for_clarification` 使用了 Interrupt&Resume 能力来实现向用户“询问”。
+
+## **二、example: 图书推荐Agent**
+
+根据用户的输入推荐相关图书。
 
 **🏗️ 项目架构：**
 
@@ -37,9 +257,9 @@ common/
     └── util.go
 ```
 
-根据用户的输入推荐相关图书。
 
-1. ark.go：创建 ChatModel
+
+1. 创建 ChatModel: ark.go
 ```go
 import (
 	"context"
@@ -65,7 +285,7 @@ func NewArkChatModel() model.ToolCallingChatModel {
 
 
 
-1. booksearch.go: 将本地函数转换一个tool，使用 utils.InferTool 构建
+1. utils.InferTool将本地函数转换一个tool: booksearch.go
 ```go
 import (
     "context"
@@ -100,8 +320,9 @@ func NewBookRecommender() tool.InvokableTool {
 
 
 
-1. 创建 ChatModelAgent
+1. 创建 ChatModelAgent: booksearch.go
 ```go
+// eino-examples/adk/intro/chatmodel/subagents/agent.go
 import (
     "context"
     "fmt"
@@ -134,9 +355,11 @@ func NewBookRecommendAgent() adk.Agent {
 }
 ```
 
-通过 Runner 运行：
 
+
+1. 通过 Runner 运行：chatmodel.go
 ```go
+// eino-examples/adk/intro/chatmodel/chatmodel.go
 import (
     "context"
     "fmt"
@@ -174,52 +397,128 @@ func main() {
 
 
 
-1. **工具调用**
-ChatModelAgent 内使用了 [ReAct](https://react-lm.github.io/) 模式，该模式旨在通过让 ChatModel 进行显式的、一步一步的“思考”来解决复杂问题。为 ChatModelAgent 配置了工具后，它在内部的执行流程就遵循了 ReAct 模式：
-
-- 调用 ChatModel（Reason）
-- LLM 返回工具调用请求（Action）
-- ChatModelAgent 执行工具（Act）
-- 它将工具结果返回给 ChatModel（Observation），然后开始新的循环，直到 ChatModel 判断不需要调用 Tool 结束。
-![](/images/22524637-29b5-80e9-84e8-ff0346e83856/image_24824637-29b5-80ce-99e3-fdb27b582776.jpg)
-
-可以通过 ToolsConfig 为 ChatModelAgent 配置 Tool：
-
-- ToolsConfig 复用了 Eino Graph ToolsNodeConfig，详细参考：[Eino: ToolsNode&Tool 使用说明](https://www.cloudwego.io/zh/docs/eino/core_modules/components/tools_node_guide)
-- 额外提供了 ReturnDirectly 配置，ChatModelAgent 调用配置在 ReturnDirectly 中的 Tool 后会直接退出。
+1. 工具 `ask_for_clarification` 使用了 Interrupt&Resume 能力来实现向用户“询问”。
 ```go
-// github.com/cloudwego/eino/adk/chatmodel.go
+import (
+    "context"
+    "log"
 
-type ToolsConfig struct {
-    compose.ToolsNodeConfig
+    "github.com/cloudwego/eino/components/tool"
+    "github.com/cloudwego/eino/components/tool/utils"
+    "github.com/cloudwego/eino/compose"
+)
 
-    // Names of the tools that will make agent return directly when the tool is called.
-    // When multiple tools are called and more than one tool is in the return directly list, only the first one will be returned.
-    ReturnDirectly map[string]bool
+type askForClarificationOptions struct {
+    NewInput *string
+}
+
+func WithNewInput(input string) tool.Option {
+    return tool.WrapImplSpecificOptFn(func(t *askForClarificationOptions) {
+       t.NewInput = &input
+    })
+}
+
+type AskForClarificationInput struct {
+    Question string `json:"question" jsonschema:"description=The specific question you want to ask the user to get the missing information"`
+}
+
+func NewAskForClarificationTool() tool.InvokableTool {
+    t, err := utils.InferOptionableTool(
+       "ask_for_clarification",
+       "Call this tool when the user's request is ambiguous or lacks the necessary information to proceed. Use it to ask a follow-up question to get the details you need, such as the book's genre, before you can use other tools effectively.",
+       func(ctx context.Context, input *AskForClarificationInput, opts ...tool.Option) (output string, err error) {
+          o := tool.GetImplSpecificOptions[askForClarificationOptions](nil, opts...)
+          if o.NewInput == nil {
+             return "", compose.NewInterruptAndRerunErr(input.Question)
+          }
+          return *o.NewInput, nil
+       })
+    if err != nil {
+       log.Fatal(err)
+    }
+    return t
 }
 ```
 
 
 
-**当没有配置工具时，ChatModelAgent 退化为一次 ChatModel 调用。**
+在 Runner 中配置 CheckPointStore（例子中使用最简单的 InMemoryStore），并在调用 Agent 时传入 CheckPointID (用来在恢复时使用)。
 
-
-
-**GenModelInput:**
-
-ChatModelAgent 创建时可以配置 GenModelInput，Agent 被调用时会使用该方法生成 ChatModel 的初始输入：
+eino Graph 在中断时，会把 Graph 的 InterruptInfo 放入 Interrupted.Data 中：
 
 ```go
-type GenModelInput func(ctx context.Context, instruction string, input *AgentInput) ([]Message, error)
+func main() {
+    ctx := context.Background()
+    a := internal.NewBookRecommendAgent()
+    runner := adk.NewRunner(ctx, adk.RunnerConfig{
+       Agent:           a,
+       CheckPointStore: newInMemoryStore(),
+    })
+    iter := runner.Query(ctx, "recommend a book to me", adk.WithCheckPointID("1"))
+    for {
+       event, ok := iter.Next()
+       if !ok {
+          break
+       }
+       if event.Err != nil {
+          log.Fatal(event.Err)
+       }
+       if event.Action != nil && event.Action.Interrupted != nil {
+          fmt.Printf("\ninterrupt happened, info: %+v\n", event.Action.Interrupted.Data.(*compose.InterruptInfo).RerunNodesExtra["ToolNode"])
+          continue
+       }
+       msg, err := event.Output.MessageOutput.GetMessage()
+       if err != nil {
+          log.Fatal(err)
+       }
+       fmt.Printf("\nmessage:\n%v\n======\n\n", msg)
+    }
+    
+    // xxxxxx
+}
 ```
 
-Agent 提供了默认的 GenModelInput 方法：
-
-1. 将 Instruction 作为 system message 加到 AgentInput.Messages 前
-1. 以 SessionValues 为 variables 渲染 1 中得到的 message list
 
 
-## **二、Chain Agent: todoagent**
+之后向用户询问新输入并恢复运行
+
+```go
+func main(){
+    // xxx
+    scanner := bufio.NewScanner(os.Stdin)
+    fmt.Print("new input is:\n")
+    scanner.Scan()
+    nInput := scanner.Text()
+
+    iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{chatmodel.WithNewInput(nInput)}))
+    if err != nil {
+        log.Fatal(err)
+    }
+    for {
+        event, ok := iter.Next()
+        if !ok {
+           break
+        }
+        if event.Err != nil {
+           log.Fatal(event.Err)
+        }
+        msg, err := event.Output.MessageOutput.GetMessage()
+        if err != nil {
+           log.Fatal(err)
+        }
+        fmt.Printf("\nmessage:\n%v\n======\n\n", msg)
+    }
+}
+
+```
+
+
+
+
+
+# 附：c**hain agent examples**
+
+## **example：todoagent**
 
 在构建 Agent 时，ToolsNode 是一个核心组件，它负责管理和执行工具调用。ToolsNode 可以集成多个工具，并提供统一的调用接口。它支持同步调用（Invoke）和流式调用（Stream）两种方式，能够灵活地处理不同类型的工具执行需求。
 
@@ -320,18 +619,13 @@ func main() {
         fmt.Println(msg.Content)
     }
 }
-
 ```
 
-
-
-## 三、程序员鼓励师chat
+## example：程序员鼓励师chat
 
 使用ChatModel构建一个简单的"程序员鼓励师" LLM 应用。包括：创建ChatTemplate、创建 ChatModel、运行ChatModel
 
 > 代码库：[https://github.com/cloudwego/eino-examples/tree/main/quickstart/chat](https://github.com/cloudwego/eino-examples/tree/main/quickstart/chat)
-
-
 
 1. **创建ChatTemplate (template.go)**
 对话是通过 `schema.Message` 来表示，含以下重要字段：

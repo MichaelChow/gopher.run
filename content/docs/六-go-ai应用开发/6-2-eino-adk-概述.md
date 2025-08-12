@@ -19,6 +19,40 @@ Eino 把最常用的**大模型应用模式**封装成**简单、易用的工具
 - `ADK/`：Eino Agent Development Kit，参考 [Google-ADK](https://google.github.io/adk-docs/agents/) 的设计，基于Eino已有组件生态的面向Agent开发的框架，**相较于Eino Graph 大幅简化了Agent、Multi-Agent开发**。它通过内置能力高效协调多智能体交互：跨智能体上下文传播、流式数据兼容与动态转换、任务控制权转移、中断与恢复机制、通用切面编程特性。适用场景广泛、模型无关、部署无关，并提供完善的生产级应用的治理能力，助力开发者搭建 **对话智能体、非对话智能体、复杂任务、工作流**等多种多样的 Agent 应用。
 ![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_24724637-29b5-8089-87f7-e37a36c1713d.jpg)
 
+```go
+// eino-framework/eino/adk
+adk/
+├── 1. 核心接口定义
+│   ├── interface.go          # 定义Agent、Message等核心接口和数据结构
+│   └── instruction.go        # 指令相关的接口定义
+│
+├── 2. 基础工具和基础设施
+│   ├── utils.go              # 异步迭代器、生成器等核心工具函数
+│   ├── call_option.go        # 调用选项和配置管理
+│   └── runctx.go             # 运行时上下文管理
+│
+├── 3. 核心代理实现
+│   ├── chatmodel.go          # 聊天模型代理，处理AI对话和工具调用
+│   ├── agent_tool.go         # 代理工具集成，支持工具调用功能
+│   ├── flow.go               # 流程代理，管理代理间的消息流转
+│   ├── workflow.go           # 工作流代理，支持顺序、并行、循环执行
+│   └── react.go              # ReAct代理，实现推理和行动循环
+│
+├── 4. 执行和运行管理
+│   ├── runner.go             # 代理运行器，管理代理的生命周期和执行
+│   └── interrupt.go          # 中断处理，支持代理执行的中断和恢复
+│
+├── 5. 预构建组件
+│   └── prebuilt/             # 预构建的代理和工具组件
+│   ├──--- supervisor.go      # 监督者模式实现
+│
+└── 6. 测试文件
+    ├── *_test.go             # 各模块的单元测试
+    └── ...
+```
+
+
+
 ### **Agent Interface**
 
 **Agent Interface：**
@@ -352,6 +386,7 @@ AgentInput 的上下文策略：上游 Agent 全对话
 Parallel Agent 执行时，将 SubAgents 列表，并发执行，待所有 Agent 执行完成后结束。
 
 ```go
+// eino/adk/workflow.go
 type ParallelAgentConfig struct {
     Name        string
     Description string
@@ -375,6 +410,7 @@ func NewParallelAgent(ctx context.Context, config *ParallelAgentConfig) (Agent, 
 Sequential Agent 执行时，将 SubAgents 列表，并发执行，待所有 Agent 执行完成后结束。
 
 ```go
+// eino/adk/workflow.go
 type LoopAgentConfig struct {
     Name        string
     Description string
@@ -400,6 +436,7 @@ func NewLoopAgent(ctx context.Context, config *LoopAgentConfig) (Agent, error) {
 注：一个 Agent 能否将其他 Agent 当成 Tool 进行调用，取决于自身的实现。adk 中提供的 ChatModelAgent 支持 AgentAsTool 的功能
 
 ```go
+// eino/adk/agent_tool.go
 func NewAgentTool(_ context.Context, agent Agent, options ...AgentToolOption) tool.BaseTool {
     // omit code
 }
@@ -1030,7 +1067,7 @@ updateTool, err := utils.InferTool(
 
 
 
-**方式三**：使用 InferOptionableTool 方法
+**方式三**：使用 **InferOptionableTool** 方法
 
 Option 机制是 Eino 提供的一种在运行时传递动态参数的机制。当开发者要实现一个需要自定义 option 参数时则可使用 InferOptionableTool 这个方法，相比于 InferTool 对函数签名的要求，这个方法的签名增加了一个 option 参数，签名如下：
 
