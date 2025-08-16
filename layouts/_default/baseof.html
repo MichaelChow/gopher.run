@@ -70,11 +70,7 @@
 {{ end }}
 
 {{ define "comments" }}
-{{ if and .Content (default true (default .Site.Params.BookComments .Params.BookComments)) }}
-<div class="book-comments">
-    {{- partial "docs/comments" . -}}
-</div>
-{{ end }}
+{{ partial "comments" . }}
 {{ end }}
 
 {{ define "main" }}

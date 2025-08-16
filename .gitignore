@@ -26,3 +26,6 @@ notion2hugo/
 
 # Hugo 模块缓存
 _vendor/
+
+# 运行脚本
+run.sh

@@ -1,0 +1,71 @@
+{{ if and .Site.Params.comments .Site.Params.comments.enabled }}
+<!-- Giscus评论组件 -->
+<div class="book-comments" id="comments">
+    <div class="giscus" id="giscus"></div>
+</div>
+
+<script>
+    (function () {
+        const giscus = document.getElementById('giscus');
+        if (!giscus) return;
+
+        const script = document.createElement('script');
+        script.src = 'https://giscus.app/client.js';
+        script.setAttribute('data-repo', '{{ .Site.Params.comments.repo }}');
+        script.setAttribute('data-repo-id', '{{ .Site.Params.comments.repoId }}');
+        script.setAttribute('data-category', '{{ .Site.Params.comments.category }}');
+        script.setAttribute('data-category-id', '{{ .Site.Params.comments.categoryId }}');
+        script.setAttribute('data-mapping', '{{ .Site.Params.comments.mapping }}');
+        script.setAttribute('data-strict', '{{ .Site.Params.comments.strict }}');
+        script.setAttribute('data-reactions-enabled', '{{ .Site.Params.comments.reactionsEnabled }}');
+        script.setAttribute('data-emit-metadata', '{{ .Site.Params.comments.emitMetadata }}');
+        script.setAttribute('data-input-position', '{{ .Site.Params.comments.inputPosition }}');
+        script.setAttribute('data-theme', '{{ .Site.Params.comments.theme }}');
+        script.setAttribute('data-lang', 'zh-CN');
+        script.crossOrigin = 'anonymous';
+        script.async = true;
+
+        // 简单的加载状态日志
+        script.onload = function () {
+            console.log('Giscus评论系统加载成功');
+        };
+
+        script.onerror = function () {
+            console.error('Giscus评论系统加载失败');
+        };
+
+        giscus.appendChild(script);
+    })();
+</script>
+
+<style>
+    .book-comments {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--book-border-color);
+    }
+
+    .giscus {
+        margin: 0 auto;
+        max-width: 100%;
+    }
+
+    /* 深色/浅色主题适配 */
+    @media (prefers-color-scheme: dark) {
+        .giscus {
+            color-scheme: dark;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        .giscus {
+            color-scheme: light;
+        }
+    }
+</style>
+{{ else }}
+<!-- 评论未启用 -->
+<div class="book-comments" id="comments">
+    <p>评论功能未启用</p>
+</div>
+{{ end }}

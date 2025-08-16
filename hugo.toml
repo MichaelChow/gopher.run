@@ -22,7 +22,21 @@ title = 'Gopher'
   
   # 统计配置
   googleAnalytics = "G-GRTKGSD4NB"
-  baiduAnalytics = "9529a43167a33da2d347bf338f17f65b"  
+  baiduAnalytics = "9529a43167a33da2d347bf338f17f65b"
+  
+  # 评论系统配置
+  [params.comments]
+    enabled = true  # 启用评论
+    repo = "MichaelChow/gopher.run"
+    repoId = "R_kgDOO7diiw" 
+    category = "Announcements"  #  官方推荐使用公告（announcements）类型的分类，以确保新 discussion 只能由仓库维护者和 giscus 创建。
+    categoryId = "DIC_kwDOO7dii84CuPyS" 
+    mapping = "pathname" # 配置说明见 https://giscus.app/zh-CN
+    strict = false
+    reactionsEnabled = true
+    emitMetadata = false
+    inputPosition = "bottom"
+    theme = "preferred_color_scheme"
 
 # 菜单配置
 [menu]
