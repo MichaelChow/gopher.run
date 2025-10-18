@@ -63,7 +63,7 @@ weight: 2009
             // ...cache[key] does not exist…
         }
         ```
-- **与许多其他语言不同，Go的常规错误处理使用普通的值而非异常来报告错误；而Go的panic异常只用于针对程序bug导致的预期之外的错误；Go使用常规的控制流机制（if、return）处理错误逻辑，这要求更加小心谨慎，而这恰恰是设计的要点；**
+    **错误是值：与许多其他语言不同，Go的常规错误处理使用 普通的值 而非 异常 来报告错误；而Go的panic异常只用于针对程序bug导致的预期之外的错误；Go使用常规的控制流机制（if、return）处理错误逻辑，这要求更加小心谨慎，而这恰恰是设计的要点；**
     - **原因：****exception****异常会嵌入带有错误消息的控制流去处理它，通常会导致预期外的结果；错误会以复杂、难以理解的、无用的、无法帮助定位错误的堆栈跟踪信息报告给最终用户（大多是关于程序结构方面的，而不是简单明了的错误信息）；**
     - **Go与Java的异常处理代码对比：**Java默认返回了难懂的堆栈，Go返回了简洁清晰的err描述。如：[AES256/CBC/PKCS5Padsing解密](https://developer.open-douyin.com/m/docs/resource/zh-CN/local-life/develop/OpenAPI/preparation/decrypt)
 ### **错误处理策略**

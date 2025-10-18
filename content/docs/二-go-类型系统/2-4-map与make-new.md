@@ -157,7 +157,7 @@ delete(ages, "alice")  // 删， 即便对应的键不在该映射中，此操�
 
 Map(映射)：分配一个空映射，并有足够的空间来容纳指定数量的元素。size参数可以省略，此时会分配一个较小的初始大小。
 
-map是随机顺序，`map`的迭代顺序**每次运行都会变化**（实测）。这种设计是有意为之的，因为**能防止开发的程序依赖特定遍历顺序**，而这是无法保证的。（译注：具体可以参见这里[https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order](https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order)）map的顺序取决于底层使用的hash函数，hash函数为了修复DOS拒绝服务攻击做了随机化处理。[https://github.com/golang/go/issues/2630](https://github.com/golang/go/issues/2630)。
+map是随机顺序，`map`的迭代顺序**每次运行都会变化**（实测）。这种设计是有意为之的，因为**能防止开发的程序依赖特定遍历顺序**，而这是无法保证的。（译注：具体可以参见这里[https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order](https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order)）map的顺序取决于底层使用的hash函数，hash函数为了修复DOS拒绝服务攻击做了随机化处理。。
 
 
 

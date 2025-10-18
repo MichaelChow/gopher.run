@@ -1,11 +1,11 @@
 ---
-title: "5.7 Muti-Agent"
+title: "5.9 Muti-Agent"
 date: 2025-08-01T01:50:00Z
 draft: false
-weight: 5007
+weight: 5009
 ---
 
-# 5.7 Muti-Agent
+# 5.9 Muti-Agent
 
 ## **一、host j**ournal
 
@@ -416,4 +416,6 @@ hostMA, err := host.NewMultiAgent(ctx, &host.MultiAgentConfig{
 
 
 ## 四、manus
+
+
 

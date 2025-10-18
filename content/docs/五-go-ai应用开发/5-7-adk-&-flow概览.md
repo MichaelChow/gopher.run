@@ -1,22 +1,22 @@
 ---
-title: "5.5 flow & adk 概览"
+title: "5.7 adk & flow概览"
 date: 2025-08-06T11:59:00Z
 draft: false
-weight: 5005
+weight: 5007
 ---
 
-# 5.5 flow & adk 概览
+# 5.7 adk & flow概览
 
 
 
 ## **一、什么是 Agent、ADK？**
 
-> 在 AI 应用中，Agent 通过结合大语言模型的理解能力（**ChatModel**）和预定义工具的执行能力（**Tool**），自主地完成复杂的任务。
+> Agent：通过结合大语言模型的理解能力（**ChatModel**）和预定义工具的执行能力（**Tool**），自主地完成复杂的任务。
 
 Eino 把最常用的**大模型应用模式**封装成**简单、易用的工具：**
 
 - `Flow/`：在该集成工具目录下提供了基于compose.Graph的 `ReAct Agent` 和 `Host Multi Agent`。
-- `ADK/`：Eino Agent Development Kit，参考 [Google-ADK](https://google.github.io/adk-docs/agents/) 的设计，基于Eino已有组件生态的面向Agent开发的框架，**相较于Eino Graph 大幅简化了Agent、Multi-Agent开发**。它通过内置能力高效协调多智能体交互：跨智能体上下文传播、流式数据兼容与动态转换、任务控制权转移、中断与恢复机制、通用切面编程特性。适用场景广泛、模型无关、部署无关，并提供完善的生产级应用的治理能力，助力开发者搭建 **对话智能体、非对话智能体、复杂任务、工作流**等多种多样的 Agent 应用。
+- `ADK/`：Eino Agent Development Kit，**基于Eino已有组件生态的面向Agent开发的框架**。参考 [Google-ADK](https://google.github.io/adk-docs/agents/) 的设计，**相较于Eino Graph 大幅简化了Agent、Multi-Agent开发**。它通过内置能力高效协调多智能体交互：跨智能体上下文传播、流式数据兼容与动态转换、任务控制权转移、中断与恢复机制、通用切面编程特性。适用场景广泛、模型无关、部署无关，并提供完善的生产级应用的治理能力，助力开发者搭建 **对话智能体、非对话智能体、复杂任务、工作流**等多种多样的 Agent 应用。
 ![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_24724637-29b5-8089-87f7-e37a36c1713d.jpg)
 
 ```go

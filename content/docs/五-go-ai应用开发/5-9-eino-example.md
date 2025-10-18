@@ -1,15 +1,99 @@
 ---
-title: "5.6 ChatModelAgent"
+title: "5.9 eino-example"
 date: 2025-07-03T13:48:00Z
 draft: false
-weight: 5006
+weight: 5009
 ---
 
-# 5.6 ChatModelAgent
+# 5.9 eino-example
 
 
 
-> [https://github.com/cloudwego/eino-examples](https://github.com/cloudwego/eino-examples): 提供了实用的示例来帮助上手基于Eino的AI应用开发
+# 一、仓库结构
+
+> [https://github.com/cloudwego/eino-examples](https://github.com/cloudwego/eino-examples): 包含了 Eino 框架的示例和演示代码，提供了实用的示例来帮助开发者更好地理解和使用 Eino 的功能。
+
+```markdown
+- **adk/:** xxx
+- **components/**: cloudwego/eino-ext 中各种组件的使用示例
+    - 包含不同类型组件的实现和使用方式
+    - 展示如何使用和自定义 Eino 的扩展组件
+- **compose/**: Eino 编排能力的使用示例
+    - 展示如何使用 Graph 和 Chain 进行编排
+    - 提供不同组件组合的模式
+    - 展示各种编排场景和最佳实践
+- **devops/：**xxx
+- **flow/**: Eino flow 模块的使用示例
+    - 包含基于流的编程模式演示
+    - 展示如何实现和管理数据流
+    - 包含流处理的示例
+- **quickstart/**: 用户文档中的快速入门示例
+    - 帮助新用户快速上手的基础示例
+    - 包含与官方文档中相同的演示代码
+```
+
+# 二、**quickstart/**
+
+### quickstart/chat
+
+由于默认的OpenAI模型需要翻墙、账号和绑定信用卡（实测招行的万事达信用卡被拒绝）等，较不方便。
+
+<!-- 列布局开始 -->
+
+![](/images/22524637-29b5-80e9-84e8-ff0346e83856/image_27e24637-29b5-800b-8a3c-ecf33419e9d6.jpg)
+
+
+---
+
+![](/images/22524637-29b5-80e9-84e8-ff0346e83856/image_27e24637-29b5-8031-bfeb-e47f3a070c31.jpg)
+
+
+
+<!-- 列布局结束 -->
+
+这里使用**本地的Ollama**（llama****/'lɑːmə/ n. 美洲驼；无峰驼），一个开源的本地大语言模型运行框架，支持多种开源模型。
+
+
+
+**安装ollama:**
+
+```shell
+# 安装
+brew install ollama
+# 启动
+ollama serve
+# 确认正常运行
+curl -s http://localhost:11434/api/tags
+```
+
+
+
+**跑通：**
+
+```shell
+cd eino-examples/quickstart/chat
+go run .
+# 默认流式输出
+```
+
+![](/images/22524637-29b5-80e9-84e8-ff0346e83856/image_27e24637-29b5-8005-9074-fba7685116d5.jpg)
+
+
+
+**源码解析：**
+
+- 简单的eino函数调用，熟悉最基本的调用流程
+- 单步调试看执行流：eino-ext中ollama chatModel的实现
+- **Pull Request：**llm → cm
+
+
+### quickstart/todoagent
+
+
+
+
+
+
 
 ## 一、**ChatModelAgent**
 
@@ -679,10 +763,6 @@ messages, err := template.Format(context.Background(), map[string]any{
 ```
 
 1. **创建 ChatModel (模型抽象 ollama.go)**
-Ollama 是一个开源的本地大语言模型运行框架，支持多种开源模型。
-
-llama****/'lɑːmə/ n. 美洲驼；无峰驼
-
 ```go
 // eino-examples/quickstart/chat/ollama.go
 

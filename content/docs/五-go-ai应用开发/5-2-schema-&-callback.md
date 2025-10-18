@@ -1,11 +1,11 @@
 ---
-title: "5.2 schema"
+title: "5.2 schema & callback"
 date: 2025-08-13T13:09:00Z
 draft: false
 weight: 5002
 ---
 
-# 5.2 schema
+# 5.2 schema & callback
 
 ## 一、message
 
@@ -384,7 +384,7 @@ type streamItem[T any] struct {
 
 **对比LangGraph：基于 Pregel 运行时引擎的流式处理**
 
-*Pregel 是 Google 在 2010 年发表的一篇论文中提出的图计算系统，基于 Bulk Synchronous Parallel 计算模型*
+*Pregel 是 Google 在 2010 年发表的一篇论文中提出的****图计算系统****，基于 Bulk Synchronous Parallel 计算模型*
 
 ```python
 class Pregel:
@@ -1058,6 +1058,558 @@ if contains(subIndexes, "AI") {
 denseVector := doc.DenseVector()
 if denseVector != nil {
     // 使用密集向量进行语义搜索
+}
+```
+
+## 五、select
+
+**多通道选择器：**
+
+```go
+func receiveN[T any](chosenList []int, ss []*stream[T]) (int, *streamItem[T], bool)
+```
+
+**函数切片索引**：
+
+**工作原理**：
+
+1. 根据len(chosenList)确定需要处理多少个通道；
+1. 从函数切片中选择对应的处理函数；
+1. 调用选中的函数执行实际的select操作；
+```go
+return []func(chosenList []int, ss []*stream[T]) (int, *streamItem[T], bool){
+    nil,  // 索引0：空函数
+    // 索引1：处理1个通道的select
+    // 索引2：处理2个通道的select
+    // 索引3：处理3个通道的select
+    // 索引4：处理4个通道的select
+    // 索引5：处理5个通道的select
+}[len(chosenList)](chosenList, ss)
+```
+
+
+
+## 六、callbacks
+
+> [https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/callback_manual/](https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/callback_manual/)
+
+> Eino **Callback 用户手册**：[https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/callback_manual/](https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/callback_manual/)
+
+> **Eino CallOption 能力与规范**：[https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/call_option_capabilities/](https://www.cloudwego.io/zh/docs/eino/core_modules/chain_and_graph_orchestration/call_option_capabilities/)
+
+
+
+> eino/internal/callbacks
+eino/callbacks
+
+### **整体架构层次结构**
+
+Eino的回调系统采用了**切面注入(Aspect Injection)**的设计模式，通过上下文(Context)机制实现跨组件的监控、日志记录、性能追踪等功能。
+
+```mermaid
+graph TB
+    subgraph "公共API层 (callbacks包)"
+        A["aspect_inject.go - 切面注入API"]
+        B["handler_builder.go - 处理器构建器"]
+        C["interface.go - 公共接口定义"]
+    end
+    
+    subgraph "内部实现层 (internal/callbacks包)"
+        D["inject.go - 核心执行引擎"]
+        E["manager.go - 管理器实现"]
+        F["interface.go - 内部接口定义"]
+    end
+    
+    subgraph "组件集成层"
+        G["compose包集成"]
+        H["组件回调集成"]
+        I["图执行集成"]
+    end
+    
+    A --> D
+    B --> D
+    C --> D
+    D --> E
+    E --> G
+    E --> H
+    E --> I
+```
+
+
+
+整个系统分为三个层次：
+
+```mermaid
+graph TB
+    subgraph "公共API层"
+        A["callbacks.OnStart/OnEnd/OnError"]
+        B["callbacks.InitCallbacks/AppendHandlers"]
+    end
+    
+    subgraph "内部引擎层"
+        C["callbacks.On[T] - 核心执行引擎"]
+        D["callbacks.manager - 管理器"]
+        E["GlobalHandlers - 全局处理器"]
+    end
+    
+    subgraph "图执行集成层"
+        F["compose.onStart/onEnd/onError"]
+        G["compose.runWithCallbacks"]
+    end
+    
+    A --> C
+    B --> D
+    C --> D
+    D --> E
+    F --> C
+    G --> F
+```
+
+
+
+### 核心结构体/接口定义
+
+**Handler接口体系**
+
+```mermaid
+graph TB
+    subgraph "公共API层 (callbacks包)"
+        A["aspect_inject.go - 切面注入API"]
+        B["handler_builder.go - 处理器构建器"]
+        C["interface.go - 公共接口定义"]
+    end
+    
+    subgraph "内部实现层 (internal/callbacks包)"
+        D["inject.go - 核心执行引擎"]
+        E["manager.go - 管理器实现"]
+        F["interface.go - 内部接口定义"]
+    end
+    
+    subgraph "组件集成层"
+        G["compose包集成"]
+        H["组件回调集成"]
+        I["图执行集成"]
+    end
+    
+    A --> D
+    B --> D
+    C --> D
+    D --> E
+    E --> G
+    E --> H
+    E --> I
+```
+
+```go
+// 公共接口层 (callbacks/interface.go)
+type Handler = callbacks.Handler
+
+// 内部接口层 (internal/callbacks/interface.go)
+type Handler interface {
+    OnStart(ctx context.Context, info *RunInfo, input CallbackInput) context.Context
+    OnEnd(ctx context.Context, info *RunInfo, output CallbackOutput) context.Context
+    OnError(ctx context.Context, info *RunInfo, err error) context.Context
+    OnStartWithStreamInput(ctx context.Context, info *RunInfo, 
+        input *schema.StreamReader[CallbackInput]) context.Context
+    OnEndWithStreamOutput(ctx context.Context, info *RunInfo, 
+        output *schema.StreamReader[CallbackOutput]) context.Context
+}
+```
+
+**设计亮点**：
+
+- **类型别名**: 使用type Handler = callbacks.Handler实现接口透明转发
+- **流式支持**: 完整的流式输入输出回调支持
+- **上下文传播**: 所有回调都返回修改后的上下文
+
+
+**TimingChecker接口:**
+
+```go
+// 公共接口层 (callbacks/interface.go)
+type TimingChecker = callbacks.TimingChecker
+
+// 内部接口层 (internal/callbacks/interface.go)
+type TimingChecker interface {
+	Needed(ctx context.Context, info *RunInfo, timing CallbackTiming) bool
+}
+
+const (
+    TimingOnStart CallbackTiming = iota
+    TimingOnEnd
+    TimingOnError
+    TimingOnStartWithStreamInput
+    TimingOnEndWithStreamOutput
+)
+```
+
+**时序控制机制**：
+
+- **智能过滤**: 处理器可以根据时序和上下文决定是否执行
+- **性能优化**: 避免不必要的回调执行
+- **灵活控制**: 支持细粒度的执行控制
+
+
+### **切面注入API设计**
+
+**核心切面函数:**
+
+```go
+// aspect_inject.go - 主要切面注入API
+func OnStart[T any](ctx context.Context, input T) context.Context
+func OnEnd[T any](ctx context.Context, output T) context.Context
+func OnError(ctx context.Context, err error) context.Context
+func OnStartWithStreamInput[T any](ctx context.Context, input *schema.StreamReader[T]) (context.Context, *schema.StreamReader[T])
+func OnEndWithStreamOutput[T any](ctx context.Context, output *schema.StreamReader[T]) (context.Context, *schema.StreamReader[T])
+```
+
+**设计特点**：
+
+- **泛型支持**: 使用[T any]支持任意类型
+- **流式集成**: 完整的流式处理支持
+- **类型安全**: 编译时类型检查
+**上下文管理API:**
+
+```go
+// aspect_inject.go - 主要切面注入API
+func OnStart[T any](ctx context.Context, input T) context.Context
+func OnEnd[T any](ctx context.Context, output T) context.Context
+func OnError(ctx context.Context, err error) context.Context
+func OnStartWithStreamInput[T any](ctx context.Context, input *schema.StreamReader[T]) (context.Context, *schema.StreamReader[T])
+func OnEndWithStreamOutput[T any](ctx context.Context, output *schema.StreamReader[T]) (context.Context, *schema.StreamReader[T])
+```
+
+
+
+### **处理器构建器模式**
+
+**HandlerBuilder**
+
+```go
+func EnsureRunInfo(ctx context.Context, typ string, comp components.Component) context.Context
+func ReuseHandlers(ctx context.Context, info *RunInfo) context.Context
+func InitCallbacks(ctx context.Context, info *RunInfo, handlers ...Handler) context.Context
+```
+
+**构建器模式优势**：
+
+- **链式调用**: 支持流畅的API调用
+- **可选配置**: 只设置需要的回调函数
+- **类型安全**: 编译时确保函数签名正确
+
+
+**构建器使用示例:**
+
+```go
+type HandlerBuilder struct {
+    onStartFn                func(ctx context.Context, info *RunInfo, input CallbackInput) context.Context
+    onEndFn                  func(ctx context.Context, info *RunInfo, output CallbackOutput) context.Context
+    onErrorFn                func(ctx context.Context, info *RunInfo, err error) context.Context
+    onStartWithStreamInputFn func(ctx context.Context, info *RunInfo, input *schema.StreamReader[CallbackInput]) context.Context
+    onEndWithStreamOutputFn  func(ctx context.Context, info *RunInfo, output *schema.StreamReader[CallbackOutput]) context.Context
+}
+```
+
+### **内部执行引擎分析**
+
+**核心执行函数:**
+
+```go
+handler := callbacks.NewHandlerBuilder().
+    OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context {
+        log.Printf("Starting %s of type %s", info.Name, info.Type)
+        return ctx
+    }).
+    OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
+        log.Printf("Completed %s", info.Name)
+        return ctx
+    }).
+    OnErrorFn(func(ctx context.Context, info *callbacks.RunInfo, err error) context.Context {
+        log.Printf("Error in %s: %v", info.Name, err)
+        return ctx
+    }).
+    Build()
+```
+
+**执行引擎特点**：
+
+- **统一入口**: 所有回调都通过这个函数执行
+- **时序控制**: 通过start参数控制处理器执行顺序
+- **智能过滤**: 结合TimingChecker实现条件执行
+
+
+**处理器执行顺序:**
+
+- **OnStart**: 最内层处理器最先执行，**适合资源初始化**
+- **OnEnd**: 最外层处理器最先执行，**适合资源清理**
+
+
+### **管理器架构设计**
+
+**manager结构体:**
+
+```go
+// OnStart处理器按逆序执行（后进先出）
+func OnStartHandle[T any](ctx context.Context, input T,
+    runInfo *RunInfo, handlers []Handler) (context.Context, T) {
+    for i := len(handlers) - 1; i >= 0; i-- {
+        ctx = handlers[i].OnStart(ctx, runInfo, input)
+    }
+    return ctx, input
+}
+
+// OnEnd处理器按正序执行（先进先出）
+func OnEndHandle[T any](ctx context.Context, output T,
+    runInfo *RunInfo, handlers []Handler) (context.Context, T) {
+    for _, handler := range handlers {
+        ctx = handler.OnEnd(ctx, runInfo, output)
+    }
+    return ctx, output
+}
+```
+
+**分层管理策略**：
+
+- **GlobalHandlers**: 框架级别的全局处理器，影响所有组件
+- **handlers**: 组件特定的本地处理器
+- **runInfo**: 当前执行上下文信息
+
+
+**管理器生命周期:**
+
+```go
+type manager struct {
+    globalHandlers []Handler    // 全局处理器列表
+    handlers       []Handler    // 本地处理器列表
+    runInfo        *RunInfo     // 运行时信息
+}
+
+var GlobalHandlers []Handler   // 包级全局处理器
+```
+
+**生命周期管理**：
+
+- **创建**: 根据运行时信息和处理器创建管理器
+- **注入**: 将管理器注入到上下文中
+- **提取**: 从上下文中提取管理器实例
+
+
+### **流式处理集成**
+
+**流式回调处理:**
+
+```go
+func newManager(runInfo *RunInfo, handlers ...Handler) (*manager, bool)
+func ctxWithManager(ctx context.Context, manager *manager) context.Context
+func managerFromCtx(ctx context.Context) (*manager, bool)
+```
+
+**流式处理核心**：
+
+- **流复制**: 为每个处理器创建独立的流副本
+- **并行处理**: 支持多个处理器同时处理流数据
+- **资源管理**: 确保流的正确关闭和清理
+
+
+**流转换器:**
+
+```go
+func OnWithStreamHandle[S any](ctx context.Context, inOut S, 
+    handlers []Handler, cpy func(int) []S, 
+    handle func(context.Context, Handler, S) context.Context) (context.Context, S)
+```
+
+
+
+**类型安全转换**：
+
+- **泛型支持**: 保持类型安全
+- **接口适配**: 将类型化流转换为通用接口
+- **资源管理**: 确保流的正确生命周期管理
+
+
+### **全局处理器管理**
+
+**全局处理器API**
+
+```go
+func OnStartWithStreamInputHandle[T any](ctx context.Context, 
+    input *schema.StreamReader[T], runInfo *RunInfo, 
+    handlers []Handler) (context.Context, *schema.StreamReader[T])
+```
+
+**全局处理器策略**：
+
+- **初始化**: 完全替换现有全局处理器
+- **追加**: 保留现有处理器，追加新的处理器
+- **执行顺序**: 全局处理器在用户特定处理器之前执行
+
+
+**处理器组合逻辑:**
+
+```go
+// 追加全局处理器（推荐）
+func AppendGlobalHandlers(handlers ...Handler)
+```
+
+
+
+### **实际应用场景**
+
+**性能监控处理器:**
+
+```go
+hs := make([]Handler, 0, len(nMgr.handlers)+len(nMgr.globalHandlers))
+for _, handler := range append(nMgr.handlers, nMgr.globalHandlers...) {
+    timingChecker, ok_ := handler.(TimingChecker)
+    if !ok_ || timingChecker.Needed(ctx, info, timing) {
+        hs = append(hs, handler)
+    }
+}
+```
+
+**日志记录处理器:**
+
+```go
+handler := callbacks.NewHandlerBuilder().
+    OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context {
+        start := time.Now()
+        return context.WithValue(ctx, "startTime", start)
+    }).
+    OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
+        if start, ok := ctx.Value("startTime").(time.Time); ok {
+            duration := time.Since(start)
+            metrics.RecordDuration(info.Type, info.Name, duration)
+        }
+        return ctx
+    }).
+    Build()
+
+callbacks.AppendGlobalHandlers(handler)
+```
+
+
+
+**组件集成示例:**
+
+```go
+handler := callbacks.NewHandlerBuilder().
+    OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context {
+        log.Printf("[START] Component: %s, Type: %s", info.Name, info.Type)
+        return ctx
+    }).
+    OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
+        log.Printf("[END] Component: %s completed successfully", info.Name)
+        return ctx
+    }).
+    OnErrorFn(func(ctx context.Context, info *callbacks.RunInfo, err error) context.Context {
+        log.Printf("[ERROR] Component: %s failed: %v", info.Name, err)
+        return ctx
+    }).
+    Build()
+```
+
+
+
+### 设计模式
+
+**切面编程模式 (AOP):**
+
+- **横切关注点**: 日志、监控、性能追踪等
+- **非侵入性**: 不修改原有业务逻辑
+- **可组合性**: 支持多个切面的组合
+
+
+**责任链模式:**
+
+处理器列表形成了**责任链模式**：每个处理器都可以修改上下文，影响后续处理器的行为。
+
+```mermaid
+graph LR
+    A["Global Handler 1"] --> B["Global Handler 2"]
+    B --> C["Local Handler 1"]
+    C --> D["Local Handler 2"]
+    
+    E["Context"] --> A
+    D --> F["Modified Context"]
+```
+
+
+
+**构建器模式:**
+
+```go
+func (t *testChatModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (resp *schema.Message, err error) {
+    defer func() {
+        if err != nil {
+            callbacks.OnError(ctx, err)
+        }
+    }()
+
+    ctx = callbacks.OnStart(ctx, &model.CallbackInput{
+        Messages: input,
+        Tools:    nil,
+        Extra:    nil,
+    })
+
+    // 组件业务逻辑...
+
+    ctx = callbacks.OnEnd(ctx, &model.CallbackOutput{
+        Message: resp,
+        Extra:   nil,
+    })
+
+    return resp, nil
+}
+```
+
+**构建器模式优势**：
+
+- **链式调用**: 支持流畅的API调用
+- **可选配置**: 只设置需要的回调函数
+- **类型安全**: 编译时确保函数签名正确
+
+
+### **性能优化特性**
+
+**智能处理器过滤：**通过TimingChecker接口实现智能过滤，避免不必要的处理器执行。
+
+```mermaid
+graph LR
+    A["Global Handler 1"] --> B["Global Handler 2"]
+    B --> C["Local Handler 1"]
+    C --> D["Local Handler 2"]
+    
+    E["Context"] --> A
+    D --> F["Modified Context"]
+```
+
+**内存复用和隔离:**通过值复制而非指针共享，确保线程安全和内存隔离。
+
+```go
+handler := callbacks.NewHandlerBuilder().
+    OnStartFn(startFn).
+    OnEndFn(endFn).
+    OnErrorFn(errorFn).
+    Build()
+```
+
+**上下文隔离:**每个上下文都有独立的管理器实例，确保并发安全。
+
+```go
+func ctxWithManager(ctx context.Context, manager *manager) context.Context {
+    return context.WithValue(ctx, CtxManagerKey{}, manager)
+}
+```
+
+**处理器执行优化：**避免不必要的循环和函数调用。
+
+```go
+for _, handler := range append(nMgr.handlers, nMgr.globalHandlers...) {
+    timingChecker, ok_ := handler.(TimingChecker)
+    if !ok_ || timingChecker.Needed(ctx, info, timing) {
+        hs = append(hs, handler)
+    }
 }
 ```
 
