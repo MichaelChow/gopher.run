@@ -20,25 +20,22 @@ weight: 3001
 **Go语言中的并发程序可以用两种手段来实现：**
 
 - **多线程共享内存**（传统的并发模型，如Java/Python/C++）：共享数据结构由锁保护，线程会争夺这些锁以访问数据。由于实现正确访问共享变量的复杂性而变得困难。
-- **通信顺序进程**(**Communicating Sequential Process**,**CSP**)的**并发编程模型**：Go不鼓励显式使用锁来协调对共享数据的访问，而是鼓励使用 channels在不同的运行实例（goroutine）之间**传递共享值**。在任何给定时间，只有一个 goroutine 可以访问该值，**实际上它从未被不同的执行线程主动共享，从设计上确保了数据竞争不可能发生。**为了鼓励这种思维方式，将它简化为一个口号：
-    > 💡 **Do not communicate by sharing memory; instead, share memory by communicating.**
-    > - [https://go.dev/doc/effective_go#channels](https://go.dev/doc/effective_go#channels)
-    > - [https://go.dev/blog/codelab-share](https://go.dev/blog/codelab-share)
+- **通信顺序进程**(**Communicating Sequential Process**,**CSP**)的**并发编程模型**：Go不鼓励显式使用锁来协调对共享数据的访问，而是鼓励使用独立的用于goroutine间通信的**引用类型channel**在不同的goroutine之间**传递共享值**。在任何给定时间，只有一个goroutine 可以访问该值，**实际上它从未被不同的执行线程主动共享，从设计上确保了数据竞争不可能发生。**为了鼓励这种思维方式，将它简化为一个口号：
+    > 💡 **Do not communicate by sharing memory; instead, share memory by communicating.**[channels](https://go.dev/doc/effective_go#channels) [codelab-share](https://go.dev/blog/codelab-share)
 
 
 **CSP模型的理解方法**：
 
-考虑一个典型的单线程程序在一个 CPU 上运行，它不需要同步原语（如锁、信号量等）。
+考虑一个典型的单线程程序在一个 CPU 上运行，它不需要**同步原语（如锁、信号量等）**。
 
 现在运行另一个这样的实例，它同样不需要同步。
 
-现在让这两个实例进行通信；如果通信是同步器，那么仍然不需要其他同步。（通信操作本身提供了必要的同步）。
+现在**让这两个实例进行通信；如果通信是同步器，那么仍然不需要其他同步**。（**通信操作本身提供了必要的同步**）。
 
 如，Unix 管道完美地符合这个模型。尽管 Go 的并发方法源于 Hoare 的通信顺序进程（CSP），但它也可以被视为 **Unix 管道的类型安全泛化**。
 
 ```shell
-# 经典的Unix管道
-# 管道自动处理了程序间的同步: cat 写入数据时，grep 自动等待; grep 处理完数据后，wc 才能接收
+# 经典的Unix管道：管道自动处理了程序间的同步: cat 写入数据时，grep 自动等待; grep 处理完数据后，wc 才能接收
 cat file.txt | grep "hello" | wc -l
 ```
 
@@ -126,7 +123,7 @@ goroutine与操作系统(OS)线程的差异，本质上是属于量变
 
 **Rob Pike:**
 
-> Goroutine背后的含义是：它是一个coroutine，但是它在阻塞之后会转移到其它coroutine，同一线程上的其它coroutines也会转移，因此它们不会阻塞。
+> Goroutine背后的含义是：**它是一个coroutine，但是它在阻塞之后会转移到其它coroutine，同一线程上的其它coroutines也会转移，因此它们不会阻塞。**
 因此，从根本上讲Goroutines是coroutines的一个分支，可在足够多的操作线程上获得多路特性，不会有Goroutines会被其他coroutine阻塞。如果它们只是协作的话，只需一个线程即可。但是如果有很多IO操作的话，就会有许多操作系统动作，也就会有许多许多线程。但是Goroutines还是非常廉价的，它们可以有数十万之众，总体运行良好并只占用合理数量的内存，它们创建起来很廉价并有垃圾回收功能，一切都非常简单。
 
 
@@ -154,24 +151,24 @@ goroutine与操作系统(OS)线程的差异，本质上是属于量变
     - 在休眠中的或者在通信中被阻塞的goroutine是不需要一个对应的线程来做调度的。
     - 在I/O中或系统调用中或调用非Go语言函数时，是需要一个对应的操作系统线程的，但是GOMAXPROCS并不需要将这几种情况计算在内。
 - 你可以用GOMAXPROCS的环境变量来显式地控制这个参数，或者也可以在运行时用runtime.GOMAXPROCS函数来修改它。我们在下面的小程序中会看到GOMAXPROCS的效果，这个程序会无限打印0和1。
-    ```go
-    for {
-        go fmt.Print(0)
-        fmt.Print(1)
-    }
-    $ GOMAXPROCS=1 go run hacker-cliché.go
-    111111111111111111110000000000000000000011111...
-    $ GOMAXPROCS=2 go run hacker-cliché.go
-    010101010101010101011001100101011010010100110...
-    ```
     - 在第一次执行时，最多同时只能有一个goroutine被执行。初始情况下只有main goroutine被执行，所以会打印很多1。过了一段时间后，GO调度器会将其置为休眠，并唤醒另一个goroutine，这时候就开始打印很多0了，在打印的时候，goroutine是被调度到操作系统线程上的。
     - 在第二次执行时，我们使用了两个操作系统线程，所以两个goroutine可以一起被执行，以同样的频率交替打印0和1。我们必须强调的是goroutine的调度是受很多因子影响的，而runtime也是在不断地发展演进的，所以这里的你实际得到的结果可能会因为版本的不同而与我们运行的结果有所不同
+        ```go
+        for {
+            go fmt.Print(0)
+            fmt.Print(1)
+        }
+        $ GOMAXPROCS=1 go run hacker-cliché.go
+        111111111111111111110000000000000000000011111...
+        $ GOMAXPROCS=2 go run hacker-cliché.go
+        010101010101010101011001100101011010010100110...
+        ```
 
 
 **Goroutine没有ID号：**
 
 - 在大多数支持多线程的操作系统和程序语言中，当前的线程都有一个独特的身份（id），并且这个身份信息可以以一个普通值的形式被很容易地获取到，典型的可以是一个integer或者指针值。这种情况下我们做一个抽象化的thread-local storage（线程本地存储，多线程编程中不希望其它线程访问的内容）就很容易，只需要以线程的id作为key的一个map就可以解决问题，每一个线程以其id就能从中获取到值，且和其它线程互不冲突。
-- goroutine没有可以被程序员获取到的身份（id）的概念。这一点是设计上故意而为之，由于thread-local storage总是会被滥用。
+- goroutine没有可以被程序员获取到的身份（id）的概念。这一点是设计上故意而为之，**由于thread-local storage总是会被滥用**。
     - 比如说，一个web server是用一种支持tls的语言实现的，而非常普遍的是很多函数会去寻找HTTP请求的信息，这代表它们就是去其存储层（这个存储层有可能是tls）查找的。这就像是那些过分依赖全局变量的程序一样，会导致一种非健康的“距离外行为”，在这种行为下，一个函数的行为可能并不仅由自己的参数所决定，而是由其所运行在的线程所决定。因此，如果线程本身的身份会改变——比如一些worker线程之类的——那么函数的行为就会变得神秘莫测。
 - Go鼓励更为简单的模式，这种模式下参数（译注：外部显式参数和内部显式参数。tls 中的内容算是"外部"隐式参数）对函数的影响都是显式的。这样不仅使程序变得更易读，而且会让我们自由地向一些给定的函数分配子任务时不用担心其身份信息影响行为。
 - 你现在应该已经明白了写一个Go程序所需要的**所有语言特性信息**。
@@ -226,7 +223,8 @@ func recursiveFunction(n int) {
     recursiveFunction(n - 1)
 }
 
-// 可以轻松启动成千上万个goroutine
+// 可以轻松启动成10万个goroutine(几乎1秒全部运行完成)
+// 如果用pyhton threading.Thread 多线程（受 GIL 限制）实现，耗时非常长，且可能会耗尽系统资源。但python asyncio相对能接近 Go goroutine
 func main() {
     for i := 0; i < 100000; i++ {
         go func(id int) {  // go语句本身立即执行完成，不等待func的执行结束
@@ -275,8 +273,6 @@ Go 的调度器采用 **GMP 模型**：是 **M:N 模型**：M 个 goroutine 映�
 
 **内存效率**：每个线程都有栈空间，控制线程数就是控制内存使用
 
-
-
 ```go
 // Go运行时将多个goroutine映射到少量OS线程上
 // 通常：goroutine数量 >> OS线程数量
@@ -296,7 +292,7 @@ func main() {
 
 **阻塞处理:**
 
-当goroutine在**I/O/channel/mutex/sleep**上阻塞**，Go运行时调度器会将其挂起，从M（OS线程）上移走**（避免整个线程空转，是 Go 能高效支持 **几十万 goroutine 并发** 的关键），让其他就绪的goroutine来占用该OS线程继续执行。
+当goroutine**在I/O、sleep、channel、mutex上阻塞****，Go****运行时调度器会将其挂起，从M（OS线程）上移走**（避免整个线程空转，是 Go 能高效支持 **几十万 goroutine 并发** 的关键），让其他就绪的goroutine来占用该OS线程继续执行。
 
 如果是**syscall阻塞**（如文件读写）：runtime 可能会再起一个新的 OS 线程来替代被 syscall 卡住的线程，避免整体卡死。
 
@@ -489,13 +485,13 @@ func handleConn(c net.Conn) {
 
 ## **二、channel**
 
-**goroutine是Go程序并发的执行体，****channel（**/ˈtʃænl/，通道**）****是它们之间的连接**，可以让**一个goroutine发送特定值到另一个goroutine的通信机制。**
+**goroutine是Go程序并发执行体，****channel（**/ˈtʃænl/，通道**）****连接goroutine**，可以让**一个goroutine发送特定值到另一个goroutine的通信机制。**
 
-当**复制或者作为参数传递到一个函数时，复制的是引用**，这样调用者和被调用者都引用同一份数据结构，零值是nil。
+当**复制或者作为参数传递到一个函数时，****复制的是引用**，**这样调用者和被调用者都引用同一份数据结构**，零值是nil。
 
 
 
-和map一样，chan使用内置函数make分配，生成的值作为底层数据结构的引用**（**pointer、slice、map、function、**channel****为引用类型），chan元素有具体的类型（chan int, 类似 []int），零值为nil。**如果提供可选的整型参数，它将设置通道的缓冲区大小。默认值是零，表示无缓冲区或同步通道。
+和map一样，chan使用内置函数make分配，生成的值作为底层数据结构的引用**（**pointer、slice、map、function、**channel****为引用类型），chan元素有具体的类型（chan int, 类似 []int），零值为nil。**如果提供可选的整型参数，它将设置通道的缓冲区大小。**默认值是零，表示无缓冲区/同步通道**。
 
 每一个通道是一个具体类型的chan，叫作通道的元素类型，如一个有int类型元素的通道写为chan int。
 
@@ -512,7 +508,7 @@ ch = make(chan int, 3) // 通道容量3的缓冲通道
 
 **通道的三个主要操作**：
 
-send、receive都使用`<-`运算符（简化到一个运算符），**统称为通信**：
+**send、receive**都使用`<-`运算符（简化到一个运算符），**统称为通信**：
 
 - **发送(send)语句**：`ch <- x` ，从一个goroutine传输一个值到另一个在执行接收表达式的goroutine。
 - **接收(receive)语句**：`x = <- ch` ；`<-ch` 一个不使用接收结果的接收操作也是合法的。
@@ -523,9 +519,7 @@ send、receive都使用`<-`运算符（简化到一个运算符），**统称为
     - **不要将channel的close和文件的close操作混淆：**当结束的时候对每一个文件调Close方法是非常重要的，但channel可以不用close，channel的close**只用于 断言/通知 接收方goroutine不再向channel发送新的数据；**
     - **GC垃圾回收器 在channel没有被引用时回收它**（而不是根据它是否close）；
     - **close channel**还可以作为一个广播机制；
-
-
-### unbuffered channel
+### unbuffered channel（synchronous channel）
 
 **unbuffered channel（无缓冲通道/同步通道）**：将通信（值的交换）与同步（确保两个goroutines计算处于已知状态，类似：goroutines间的信息同步，如传统的共享变量）结合起来。
 
@@ -714,9 +708,9 @@ func main() {
 
 因为语法简单，Go新手粗暴地将缓冲通道作为队列在单个goroutine中使用，但是这是个严重错误。**如果仅仅需要一个简单的队列，使用slice创建一个就可以。**
 
-**channel和goroutine的调度深度关联，如果没有另一个goroutine从通道进行接收，发送者（也许是整个程序）有被****永久阻塞****的风险。**
+**channel和 goroutine的调度 深度关联，如果没有另一个goroutine从通道进行接收，发送者（也许是整个程序）有被****永久阻塞****的风险。**
 
-**和回收变量不同，泄漏的goroutines不会自动回收**，因此必须确保每个goroutine在不再需要的时候可以自动结束。
+**和回收变量不同，泄漏的goroutines不会自动回收**，因此必须**确保每个goroutine在不再需要的时候可以自动结束**。
 
 example：
 
@@ -776,9 +770,8 @@ request := &Request{[]int{3, 4, 5}, sum, make(chan int)}
 clientRequests <- request
 // Wait for response.
 fmt.Printf("answer: %d\n", <-request.resultChan)
-```
 
-```go
+
 // 在服务器端，唯一变化的是处理函数。
 func handle(queue chan *Request) {
     for req := range queue {

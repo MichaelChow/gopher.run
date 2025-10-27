@@ -19,6 +19,8 @@ Eino 把最常用的**大模型应用模式**封装成**简单、易用的工具
 - `ADK/`：Eino Agent Development Kit，**基于Eino已有组件生态的面向Agent开发的框架**。参考 [Google-ADK](https://google.github.io/adk-docs/agents/) 的设计，**相较于Eino Graph 大幅简化了Agent、Multi-Agent开发**。它通过内置能力高效协调多智能体交互：跨智能体上下文传播、流式数据兼容与动态转换、任务控制权转移、中断与恢复机制、通用切面编程特性。适用场景广泛、模型无关、部署无关，并提供完善的生产级应用的治理能力，助力开发者搭建 **对话智能体、非对话智能体、复杂任务、工作流**等多种多样的 Agent 应用。
 ![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_24724637-29b5-8089-87f7-e37a36c1713d.jpg)
 
+![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_29624637-29b5-8056-975d-e9cb44249dfb.jpg)
+
 ```go
 // eino-framework/eino/adk
 adk/
@@ -27,16 +29,17 @@ adk/
 │   └── instruction.go        # 指令相关的接口定义
 │
 ├── 2. 基础工具和基础设施
-│   ├── utils.go              # 异步迭代器、生成器等核心工具函数
+│   ├── utils.go              #** 异步迭代器、生成器**等核心工具函数
 │   ├── call_option.go        # 调用选项和配置管理
 │   └── runctx.go             # 运行时上下文管理
 │
-├── 3. 核心代理实现
-│   ├── chatmodel.go          # 聊天模型代理，处理AI对话和工具调用
+├── 3. 核心Agent实现
+│   ├── chatmodel.go          # ChatModel Agent，处理AI对话和工具调用
 │   ├── agent_tool.go         # 代理工具集成，支持工具调用功能
-│   ├── flow.go               # 流程代理，管理代理间的消息流转
-│   ├── workflow.go           # 工作流代理，支持顺序、并行、循环执行
-│   └── react.go              # ReAct代理，实现推理和行动循环
+│   ├── flow.go               # 流程Agent，管理代理间的消息流转
+│   ├── workflow.go           # Workflow（工作流）Agent，支持 顺序、并发、循环 控制 子Agent 可预测的确定性 执行流程
+│   └── react.go              # ReAct Agent，实现推理和行动循环
+│   └── Custom Agent          # 通过接口实现自己的 Agent，允许定义高度定制的复杂 Agent  
 │
 ├── 4. 执行和运行管理
 │   ├── runner.go             # 代理运行器，管理代理的生命周期和执行
@@ -44,7 +47,8 @@ adk/
 │
 ├── 5. 预构建组件
 │   └── prebuilt/             # 预构建的代理和工具组件
-│   ├──--- supervisor.go      # 监督者模式实现
+│   ├──--- supervisor.go      # 监督者模式实现：监督者Agent控制所有通信流程和任务委托，并根据当前上下文和任务需求决定调用哪个Agent。
+│   ├──--- plan_execute.go		 # 计划-执行模式：Plan Agent 生成含多个步骤的计划，Execute Agent 根据用户 query 和计划来完成任务。Execute 后会再次调用 Plan，决定完成任务 / 重新进行规划。
 │
 └── 6. 测试文件
     ├── *_test.go             # 各模块的单元测试
@@ -53,6 +57,11 @@ adk/
 
 
 
+A2A: 
+
+- 将 A2A Client连接的远程Agent 包装成 adk Agent
+- 将 本地的adk Agent包装成 A2A Server
+- example：还在 alpha 版本中。[https://github.com/cloudwego/eino-ext/tree/a2a/v0.0.1-alpha.4/a2a/extension/eino/examples](https://github.com/cloudwego/eino-ext/tree/a2a/v0.0.1-alpha.4/a2a/extension/eino/examples)
 ### **Agent Interface**
 
 **Agent Interface：**
@@ -1138,6 +1147,389 @@ func getMCPTool(ctx context.Context) []tool.BaseTool {
         return tools
 }
 ```
+
+
+
+# 三、adk example
+
+### 使用.env文件配置环境变量
+
+1. vscode 安装 `mikestead.dotenv` 扩展：支持.env .env.local .env.example等常见文件名的语法高亮。但不支持自动加载环境变量。
+1. 项目根目录创建.env文件，务必将.env添加到.gitignore(否则ak/sk泄露到gitlab/github)。在.env中配置：
+    1. 注意：不带双引号，不带export开头。
+    1. 终端及其子进程要生效.env： `export $(grep -v '^#' .env | xargs)` 或 .env每行都要加export开头再source
+        1. 直接`source .env` ；测试当前终端能生效：`echo $ARK_API_KEY` ，**但终端运行子进程时仍然读取不到**。
+    ```shell
+    # ark model: https://console.volcengine.com/ark
+    # 必填
+    # 火山云方舟 ChatModel 的 Endpoint ID
+    ARK_CHAT_MODEL=""
+    # 火山云方舟 向量化模型的 Endpoint ID
+    ARK_EMBEDDING_MODEL=""
+    # 火山云方舟的 API Key
+    ARK_API_KEY=""
+    ARK_BASE_URL="https://ark.cn-beijing.volces.com/api/v3/"
+    # apmplus: https://console.volcengine.com/apmplus-server
+    # 下面必填环境变量如果为空，则不开启 apmplus callback
+    # APMPlus 的 App Key，必填
+    APMPLUS_APP_KEY=""         
+    # APMPlus 的 Region，选填，不填写时，默认是 cn-beijing
+    APMPLUS_REGION=""
+    # langfuse: https://cloud.langfuse.com/
+    # 下面两个环境变量如果为空，则不开启 langfuse callback
+    # Langfuse Project 的 Public Key 
+    LANGFUSE_PUBLIC_KEY=""
+    # Langfuse Project 的 Secret Key。 注意，Secret Key 仅可在被创建时查看一次
+    LANGFUSE_SECRET_KEY=""
+    # Redis Server 的地址，不填写时，默认是 localhost:6379
+    REDIS_ADDR=
+    OPENAI_API_KEY=""
+    OPENAI_MODEL="gpt-4o-mini"
+    OPENAI_BASE_URL="https://api.openai.com/v1"
+    OPENAI_BY_AZURE=false
+    ```
+1. 从调试设置里创建 .vscode/launch.json，设置加载.env。
+    ```json
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+    	    // 配置名称，显示在下拉菜单中
+          "name": "Debug helloworld",
+          // 调试器类型
+          "type": "go",
+          // 请求类型：launch（启动程序）或 attach（附加到运行中进程）
+          "request": "launch",
+          // Go 特定的模式：debug, test, exec 等
+          "mode": "auto",
+          // 要调试的程序路径
+          "program": "${workspaceFolder}/adk/helloworld",
+          // 从 .env 文件加载环境变量
+          "envFile": "${workspaceFolder}/.env",
+          // 控制台类型
+          "console": "integratedTerminal",
+          // 是否显示详细日志
+          "showLog": false
+        }
+      ]
+    }
+    ```
+1. command + shift + D启动调试，默认会加载.env。F5继续调试、F11单步进入；
+### `helloworld` ChatModelAgent
+
+7行代码：实现简单对话式ChatModelAgent
+
+```go
+model, err := ark.NewChatModel(...)
+agent, err := adk.NewChatModelAgent(...）
+runner := adk.NewRunner(...)
+
+input := []adk.Message{...}
+events := runner.Run(ctx, input)
+for {
+		event, ok := events.Next()
+		msg, err := event.Output.MessageOutput.GetMessage()
+}
+```
+
+
+
+### `chatmodel` 
+
+12行代码：使用 `ChatModelAgent` 带interrupt中断和恢复、本地function tool
+
+```go
+model, err := ark.NewChatModel(...)
+bookSearchTool, err := utils.InferTool(..., func(ctx, input) (output, err) {...})
+newAskForClarificationTool, err := utils.InferOptionableTool(...,func(..., opts) (output, err) {...}
+agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{..., ToolsConfig: adk.ToolsConfig{...}}
+runner := adk.NewRunner{
+		...,
+		CheckPointStore: newInMemoryStore(),  // map[string][]byte
+	})
+	
+iter := runner.Query(ctx, "recommend a book to me", adk.WithCheckPointID("1"))
+// 交互循环
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+	}
+	
+
+scanner := bufio.NewScanner(os.Stdin)
+scanner.Scan()
+nInput := scanner.Text()
+iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents.WithNewInput(nInput)}))
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+### `custom Agent`
+
+7行代码：实现符合ADK定义的自定义Agent
+
+```go
+type MyAgent struct {}
+
+func (m *MyAgent) Name() {...}
+func (m *MyAgent) Description() {...}
+func (m *MyAgent) Run(...) *adk.AsyncIterator[*adk.AgentEvent] {
+	iter, gen := adk.NewAsyncIteratorPair[*adk.AgentEvent]()
+	go func() {
+		defer func() {
+			e := recover()
+			gen.Close()
+		}()
+		// agent run code
+		gen.Send(&adk.AgentEvent{
+			Output: &adk.AgentOutput{
+				MessageOutput: &adk.MessageVariant{
+					IsStreaming: false,
+					Message: &schema.Message{
+						Role:    schema.Assistant,
+						Content: "hello world",
+					},
+					Role: schema.Assistant,
+				},
+			},
+		})
+	}()
+}
+```
+
+
+
+### workflow：Loop agent + Parallel agent + Sequential agent
+
+`Loop` agent（循环agent）：14行代码，loop agent：1个main agent + 1个critique****agent， + cozeloop trace
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent()
+a2, err := adk.NewChatModelAgent()
+a, err := adk.NewLoopAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+
+query := "briefly introduce what a multimodal embedding model is."
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+`Parallel` agent（平行agent）：15行代码，Parallel agent：1个Stock数据收集 agent + 1个News数据收集****agent + 1个社交媒体数据收集****agent， + cozeloop trace
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent() // NewStockDataCollectionAgent
+a2, err := adk.NewChatModelAgent() // NewNewsDataCollectionAgent
+a3, err := adk.NewChatModelAgent() // NewSocialMediaInfoCollectionAgent
+a, err := adk.NewParallelAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2，a3}...}
+
+query := "give me today's market research"
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+`Sequential` (连续的)agent:
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent() // NewPlanAgent
+a2, err := adk.NewChatModelAgent() // NewWriterAgent
+a, err := adk.NewSequentialAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+
+query := "give me today's market research"
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+### `session`：跨agent传递 data and state（状态）
+
+9行代码：AddSessionValue、GetSessionValue
+
+```go
+adk.AddSessionValue(ctx, "user-name", in.Name)  // a1
+userName, _ := adk.GetSessionValue(ctx, "user-name") // a2
+
+toolA, err := utils.InferTool("tool_a", "set user name", toolAFn)
+toolB, err := utils.InferTool("tool_b", "set user age", toolBFn)
+
+a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+	...
+	ToolsConfig{toolA,toolB},
+	Model: model.NewChatModel()
+}
+
+r := adk.NewRunner(Agent: a)
+
+iter := r.Query(ctx, "my name is Alice, my age is 18")
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+### `transfer能力`
+
+12行代码：通过SetSubAgents的的transfer_to_agent 实现控制权的动态选择与转移。
+
+Agent 职责单一 模块化，可独立开发测试，子 Agent 专注各自能力；
+
+```go
+weatherTool, err := utils.InferTool(...)
+a1, err := adk.NewChatModelAgent(... Tools:weatherTool) // weatherAgent
+a2, err := adk.NewChatModelAgent() // chatAgent
+a3, err := adk.NewChatModelAgent() // routerAgent
+a, err := adk.SetSubAgents(routerAgent, []adk.Agent{chatAgent, weatherAgent}) // SetSubAgents会在 RouterAgent 中注入 transfer_to_agent
+
+runner := adk.NewRunner(a)
+iter := runner.Query(ctx, "What's the weather in Beijing?") // transfer(转移)到 WeatherAgent
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+
+iter = runner.Query(ctx, "Book me a flight from New York to London tomorrow.") // 无匹配 Agent，RouterAgent 直接回复无法处理
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+### `multiagent/plan-execute-replan`
+
+计划-执行-重新计划 agent：
+
+```go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+
+planexecute.NewPlanner(cm) // eino/adk/prebuilt/planexecute
+planAgent, err := agent.NewPlanner(ctx)
+
+planexecute.NewExecutor(cm)
+executeAgent, err := agent.NewExecutor(ctx)
+
+planexecute.NewReplanner(cm)
+replanAgent, err := agent.NewReplanAgent(ctx)
+
+entryAgent, err := planexecute.New(ctx, &planexecute.Config{
+		Planner:       planAgent,
+		Executor:      executeAgent,
+		Replanner:     replanAgent,
+		MaxIterations: 20,
+	})
+	
+	r := adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent: entryAgent,
+	})
+	
+query := `Plan a 3-day trip to Beijing in Next Month. I need flights from New York, hotel recommendations, and must-see attractions.
+Today is 2025-09-09.`
+ctx, endSpanFn := startSpanFn(ctx, "plan-execute-replan", query)
+iter := r.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+### `multiagent/supervisor`
+
+supervisor agent
+
+```go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+
+sv, err := adk.NewChatModelAgent()
+
+
+searchAgent, err := buildSearchAgent(ctx)
+mathAgent, err := buildMathAgent(ctx)
+sv := supervisor.New(Supervisor: sv,SubAgents:  []adk.Agent{searchAgent, mathAgent} // adk/prebuilt/supervisor
+
+query := "find US and New York state GDP in 2024. what % of US GDP was New York state?"
+runner := adk.NewRunner(sv)
+
+ctx, endSpanFn := startSpanFn(ctx, "Supervisor", query)
+iter := runner.Query(ctx, query)
+
+for {
+		event, hasEvent := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+### `multiagent/layered-supervisor`
+
+another example of supervisor agent, which set a supervisor agent as sub-agent of another supervisor agent
+
+
+
+### `multiagent/integration-project-manager`
+
+another example of using supervisor agent.
+
+
+
+### `common`
+
+utils
 
 
 

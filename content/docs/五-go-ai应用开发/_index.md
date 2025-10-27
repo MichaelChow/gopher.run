@@ -19,10 +19,7 @@ weight: 5000
 - [5.6 compose-编排](5-6-compose-编排/)
 - [5.7 adk & flow概览](5-7-adk-&-flow概览/)
 - [5.8 eino-ext](5-8-eino-ext/)
-- [5.9 Muti-Agent](5-9-muti-agent/)
 - [5.9 eino-example](5-9-eino-example/)
-
-
 
 
 

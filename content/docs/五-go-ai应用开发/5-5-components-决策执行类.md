@@ -275,7 +275,178 @@ func ConvCallbackInput(src callbacks.CallbackInput) *CallbackInput {
 
 > [https://www.cloudwego.io/zh/docs/eino/core_modules/components/lambda_guide/](https://www.cloudwego.io/zh/docs/eino/core_modules/components/lambda_guide/)
 
-是Eino 中最基础的组件类型，它允许用户在工作流中嵌入自定义的函数逻辑。Lambda 组件底层是由输入输出是否流所形成的 4 种运行函数组成，对应 4 种交互模式: Invoke、Stream、Collect、Transform。
+自定义组件-Lambda组件：支持**自定义的函数逻辑。**
 
-用户构建 Lambda 时可实现其中的一种或多种，框架会根据一定的规则进行转换。
+是Eino 中最基础的组件类型，它允许用户在工作流中嵌入。Lambda 组件底层是由输入输出是否流对应 4 种交互模式（4种函数）: Invoke、Stream、Collect、Transform。
+
+
+
+**Lambda组件定义**：核心是 `Lambda` 结构体，封装了用户提供的 Lambda 函数，用户可通过构建方法创建一个 Lambda 组件：
+
+```go
+// eino/compose/types_lambda.go
+
+// Lambda is the node that wraps the user provided lambda function.
+// It can be used as a node in Graph or Chain (include Parallel and Branch).
+// Create a Lambda by using AnyLambda/InvokableLambda/StreamableLambda/CollectableLambda/TransformableLambda.
+// eg.
+//
+//	lambda := compose.InvokableLambda(func(ctx context.Context, input string) (output string, err error) {
+//		return input, nil
+//	})
+type Lambda struct {
+	executor *composableRunnable
+}
+```
+
+
+
+**Lambda组件的构建方法：**
+
+- Eino的组件接口的统一规范:一个组件的可调用方法需要有3个入参和2个出参：`func (ctx, input, …option) (output, error)`
+- 但在使用 Lambda 的场景中通常使用匿名函数
+**不使用自定义 Option:**
+
+```go
+// input 和 output 类型为自定义的任何类型
+lambda := compose.InvokableLambda(func(ctx context.Context, input string) (output string, err error) {
+    // some logic
+})
+
+// input 可以是任意类型；output 必须是 *schema.StreamReader[O]，其中 O 可以是任意类型
+lambda := compose.StreamableLambda(func(ctx context.Context, input string) (output *schema.StreamReader[string], err error) {
+    // some logic
+})
+
+// input 必须是 *schema.StreamReader[I]，其中 I 可以是任意类型；output 可以是任意类型
+lambda := compose.CollectableLambda(func(ctx context.Context, input *schema.StreamReader[string]) (output string, err error) {
+    // some logic
+})
+
+// input 必须是 *schema.StreamReader[I]，其中 I 可以是任意类型；output 必须是 *schema.StreamReader[O]，其中 O 可以是任意类型
+lambda := compose.TransformableLambda(func(ctx context.Context, input *schema.StreamReader[string]) (output *schema.StreamReader[string], err error) {
+    // some logic
+})
+```
+
+**使用自定义 Option:**
+
+```go
+type Options struct {
+    Field1 string
+}
+type MyOption func(*Options)
+
+lambda := compose.InvokableLambdaWithOption(
+    func(ctx context.Context, input string, opts ...MyOption) (output string, err error) {
+        // 处理 opts
+        // some logic
+    }
+)
+
+// AnyLambda 允许同时实现多种交互模式的 Lambda 函数类型：
+type Options struct {
+    Field1 string
+}
+
+type MyOption func(*Options)
+
+// input 和 output 类型为自定义的任何类型
+lambda, err := compose.AnyLambda(
+    // Invoke 函数
+    func(ctx context.Context, input string, opts ...MyOption) (output string, err error) {
+        // some logic
+    },
+    // Stream 函数
+    func(ctx context.Context, input string, opts ...MyOption) (output *schema.StreamReader[string], err error) {
+        // some logic
+    },
+    // Collect 函数
+    func(ctx context.Context, input *schema.StreamReader[string], opts ...MyOption) (output string, err error) {
+        // some logic
+    },
+    // Transform 函数
+    func(ctx context.Context, input *schema.StreamReader[string], opts ...MyOption) (output *schema.StreamReader[string], err error) {
+        // some logic
+    },
+)
+```
+
+
+
+**Graph 中使用：**
+
+```go
+graph := compose.NewGraph[string, *MyStruct]()
+graph.AddLambdaNode(
+    "node1",
+    compose.InvokableLambda(func(ctx context.Context, input string) (*MyStruct, error) {
+        // some logic
+    }),
+)
+```
+
+**Chain 中使用：**
+
+```go
+chain := compose.NewChain[string, string]()
+chain.AppendLambda(compose.InvokableLambda(func(ctx context.Context, input string) (string, error) {
+    // some logic
+}))
+```
+
+
+
+**两个内置的 Lambda：**
+
+```go
+// ToList 是一个内置的 Lambda，用于将单个输入元素转换为包含该元素的切片（数组）：
+// 创建一个 ToList Lambda
+lambda := compose.ToList[*schema.Message]()
+
+// 在 Chain 中使用
+chain := compose.NewChain[[]*schema.Message, []*schema.Message]()
+chain.AppendChatModel(chatModel)  // chatModel 返回 *schema.Message
+chain.AppendLambda(lambda)        // 将 *schema.Message 转换为 []*schema.Message
+```
+
+
+
+```go
+
+// MessageParser 是一个内置的 Lambda，用于将 JSON 消息（通常由 LLM 生成）解析为指定的结构体：
+// 定义解析目标结构体
+type MyStruct struct {
+    ID int `json:"id"`
+}
+
+// 创建解析器
+parser := schema.NewMessageJSONParser[*MyStruct](&schema.MessageJSONParseConfig{
+    ParseFrom: schema.MessageParseFromContent,
+    ParseKeyPath: "", // 如果仅需要 parse 子字段，可用 "key.sub.grandsub"
+})
+
+// 创建解析 Lambda
+parserLambda := compose.MessageParser(parser)
+
+// 在 Chain 中使用
+chain := compose.NewChain[*schema.Message, *MyStruct]()
+chain.AppendLambda(parserLambda)
+
+// 使用示例
+runner, err := chain.Compile(context.Background())
+parsed, err := runner.Invoke(context.Background(), &schema.Message{
+    Content: `{"id": 1}`,
+})
+// parsed.ID == 1
+
+// MessageParser 支持从消息内容（Content）或工具调用结果（ToolCall）中解析数据，这在意图识别等场景中常用：
+
+// 从工具调用结果解析
+parser := schema.NewMessageJSONParser[*MyStruct](&schema.MessageJSONParseConfig{
+    ParseFrom: schema.MessageParseFromToolCall,
+})
+```
+
+
 

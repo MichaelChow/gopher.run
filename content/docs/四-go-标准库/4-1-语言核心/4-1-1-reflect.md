@@ -445,38 +445,6 @@ weight: 4001
         fmt.Println(x)                    // "3"
         ```
     - 或者，不使用指针，而是通过调用可取地址的reflect.Value的reflect.Value.Set方法来更新对应的值：
-        - Set方法将在运行时执行和编译时进行类似的可赋值性约束的检查。以上代码，变量和值都是int类型，但是如果变量是int64类型，那么程序将抛出一个panic异常，所以关键问题是要确保改类型的变量可以接受对应的值：
-        ```go
-        d.Set(reflect.ValueOf(4))
-        fmt.Println(x) // "4"
-        ```
-        - 同样，对一个不可取地址的reflect.Value调用Set方法也会导致panic异常：
-            ```go
-            x := 2
-            b := reflect.ValueOf(x)
-            b.Set(reflect.ValueOf(3)) // panic: Set using unaddressable value
-            ```
-        - 这里有很多用于基本数据类型的Set方法：SetInt、SetUint、SetString和SetFloat等。
-            ```go
-            d := reflect.ValueOf(&x).Elem()
-            d.SetInt(3)
-            fmt.Println(x) // "3"
-            ```
-        - 从某种程度上说，这些Set方法总是尽可能地完成任务。以SetInt为例，只要变量是某种类型的有符号整数就可以工作，即使是一些命名的类型、甚至只要底层数据类型是有符号整数就可以，而且如果对于变量类型值太大的话会被自动截断。但需要谨慎的是：对于一个引用interface{}类型的reflect.Value调用SetInt会导致panic异常，即使那个interface{}变量对于整数类型也不行。
-            ```go
-            x := 1
-            rx := reflect.ValueOf(&x).Elem()
-            rx.SetInt(2)                     // OK, x = 2
-            rx.Set(reflect.ValueOf(3))       // OK, x = 3
-            rx.SetString("hello")            // panic: string is not assignable to int
-            rx.Set(reflect.ValueOf("hello")) // panic: string is not assignable to int
-            var y interface{}
-            ry := reflect.ValueOf(&y).Elem()
-            ry.SetInt(2)                     // panic: SetInt called on interface Value
-            ry.Set(reflect.ValueOf(3))       // OK, y = int(3)
-            ry.SetString("hello")            // panic: SetString called on interface Value
-            ry.Set(reflect.ValueOf("hello")) // OK, y = "hello"
-            ```
     - 当我们用Display显示os.Stdout结构时，我们发现反射可以越过Go语言的导出规则的限制读取结构体中未导出的成员，比如在类Unix系统上os.File结构体中的fd int成员。然而，利用反射机制并不能修改这些未导出的成员：
         ```go
         stdout := reflect.ValueOf(os.Stdout).Elem() // *os.Stdout, an os.File var
