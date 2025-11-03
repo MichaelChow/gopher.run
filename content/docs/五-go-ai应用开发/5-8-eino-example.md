@@ -1,11 +1,11 @@
 ---
-title: "5.9 eino-example"
+title: "5.8 eino-example"
 date: 2025-07-03T13:48:00Z
 draft: false
-weight: 5009
+weight: 5008
 ---
 
-# 5.9 eino-example
+# 5.8 eino-example
 
 
 
@@ -612,13 +612,13 @@ func main(){
 
 # 六、adk/
 
-详见：[三、adk example](https://www.notion.so/2472463729b580afa6a1e96b72202555#2472463729b580caa58efb2a949867de) 
+详见：[四、adk example ？？？](https://www.notion.so/2472463729b580afa6a1e96b72202555#2472463729b580caa58efb2a949867de) 
 
 
 
 
 
-# 七、agent ap
+# 七、agent app
 
 ## **host j**ournal
 
