@@ -707,7 +707,7 @@ agent, err := react.NewAgent(ctx, &react.AgentConfig{
 - 参数约束直接维护在 input struct的tag参数定义中（参考上方 `GoStruct2ParamsOneOf`）时（参数结构体和描述信息同源，无需维护两份信息）。
 ```go
 // 通过**utils.InferTool**把AddUser()封装成tool
-func createTool() (tool.InvokableTool, error) {
+func createTool() (tool.InvokableTool, error) {aqaswq
     return utils.InferTool("add_user", "add user", AddUser)
 }
 ```

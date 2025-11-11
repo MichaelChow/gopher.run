@@ -451,7 +451,7 @@ supervisor, err := supervisor.New(ctx, &supervisor.Config{
 
 <!-- 列布局结束 -->
 
-完整example：[推荐： multiagent/integration-project-manager: using supervisor agent](https://www.notion.so/2472463729b580afa6a1e96b72202555#2982463729b580228d42f9b03c4d426f) 
+完整example：[4.10 multiagent/integration-project-manager: supervisor agent（推荐）](https://www.notion.so/2472463729b580afa6a1e96b72202555#2982463729b580228d42f9b03c4d426f) 
 
 
 
@@ -731,7 +731,11 @@ func NewAgentTool(_ context.Context, agent Agent, options ...AgentToolOption) to
 
 ### **Runner抽象与 Interrupted Action、Checkpoint、Resume**
 
-**Runner: 是 Eino ADK 中负责执行 Agent 的核心引擎**。主要作用是管理和控制 Agent 的整个生命周期，如处理多 Agent 协作，保存传递上下文等，interrupt、callback 等切面能力也均依赖 Runner 实现。任何 Agent 都应通过 Runner 来运行。
+**Runner: Eino ADK 中负责执行 Agent 的核心引擎**。
+
+主要作用是**管理和控制 Agent 的整个生命周期****:**如处理多 Agent 协作，保存传递上下文等，interrupt、callback 等切面能力也均依赖 Runner 实现。
+
+**任何 Agent 都应通过 Runner 来运行**。
 
 ```go
 // github.com/cloudwego/eino/adk/runners.go
@@ -742,14 +746,17 @@ type Runner struct {
 	store           compose.CheckPointStore
 }
 
-
 // 调用
 runner := adk.NewRunner(ctx, adk.RunnerConfig{
 		EnableStreaming: true, // you can disable streaming here
 		Agent:           a,
 		CheckPointStore: newInMemoryStore(),
 })
+```
 
+
+
+```go
 func (r *Runner) Run(ctx context.Context, messages []Message, opts ...AgentRunOption) *AsyncIterator[*AgentEvent]
     
 // Query 是为了方便单次查询而提供的Run的语法糖
@@ -760,12 +767,18 @@ func (r *Runner) Query(ctx context.Context,query string, opts ...AgentRunOption)
 
 
 
-Runner 提供运行时中断与恢复的功能，允许正在运行中的 Agent 主动中断并保存其当前状态，并在未来从中断点恢复执行。该功能为长时间等待、可暂停或需要外部输入（Human in the loop）等场景下的开发提供协助。
+**Runner 提供运行时中断与恢复的功能:**
+
+允许正在运行中的 Agent 主动中断并保存其当前状态，并在未来从中断点恢复执行。
+
+使用场景：长时间等待、可暂停或需要外部输入（Human in the loop）等。多轮对话（ 多次的`runner.Query()` ）？
 
 1. **Interrupted Action**：由 Agent 抛出`Interrupt Action` 的 `Event` 中断事件，主动通知Agent `Runner` 中断运行（拦截）。并允许携带额外信息供调用方阅读与使用。
 1. **Checkpoint**：Agent `Runner` 拦截事件后，通过初始化时注册的 `CheckPointStore` 保存当前运行状态。Runner 在终止运行后会将当前运行状态（原始输入、对话历史等）以及 Agent 抛出的 InterruptInfo 以 CheckPointID 为 key 持久化到 CheckPointStore 中。
 1. **Resume**：运行条件重新 ready 后，由 Agent `Runner` 从断点通过 `Resume` 方法携带恢复运行所需要的新信息，从断点处恢复运行。
-example:
+
+
+**example**:
 
 ```go
 // 1. 创建支持断点恢复的 Runner
@@ -807,46 +820,73 @@ iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents
 
 
 
-**为了保存 interface 中数据的原本类型，Eino ADK 使用 gob（**[**https://pkg.go.dev/encoding/gob**](https://pkg.go.dev/encoding/gob)**）序列化运行状态**。Eino 会**自动注册框架内置的类型，**在使用自定义类型时需要提前使用 gob.Register 或 **gob.RegisterName 注册类型**（更推荐后者，前者使用路径加类型名作为默认名字，因此类型的位置和名字均不能发生变更）。
+**序列化：**
+
+**为了保存 interface 中数据的原本类型，Eino ADK 使用 gob（**[**https://pkg.go.dev/encoding/gob**](https://pkg.go.dev/encoding/gob)**）序列化运行状态**。
+
+Eino 会**自动注册框架内置的类型，**在使用自定义类型时需要提前使用 gob.Register 或 **gob.RegisterName 注册类型**（更推荐后者，前者使用路径加类型名作为默认名字，因此类型的位置和名字均不能发生变更）。
+
+
+
+**inMemoryStore：**
+
+**compose.CheckPointStore interface的一个实现。**
 
 ```go
-// github.com/cloudwego/eino/adk/runner.go
-type RunnerConfig struct {
-    // other fields
-    CheckPointStore CheckPointStore
-}
-
-// github.com/cloudwego/eino/adk/interrupt.go
+// **compose.CheckPointStore**
 type CheckPointStore interface {
-    Set(ctx context.Context, key string, value []byte) error
-    Get(ctx context.Context, key string) ([]byte, bool, error)
-}
-
-// github.com/cloudwego/eino/adk/interrupt.go
-func WithCheckPointID(id string) AgentRunOption {
-	return WrapImplSpecificOptFn(func(t *options) {
-		t.checkPointID = &id
-	})
+	Get(ctx context.Context, checkPointID string) ([]byte, bool, error)
+	Set(ctx context.Context, checkPointID string, checkPoint []byte) error
 }
 ```
-
-
-
-**Resume:**调用 Runner 的 Resume 接口传入中断时的 CheckPointID 可以恢复运行：
 
 ```go
-// github.com/cloudwego/eino/adk/runner.go
-func (r *Runner) Resume(ctx context.Context, checkPointID string, opts ...AgentRunOption) (*AsyncIterator[*AgentEvent], error)
+type inMemoryStore struct {
+	mem map[string][]byte
+}
+
+func (i *inMemoryStore) Set(ctx context.Context, key string, value []byte) error {
+	i.mem[key] = value
+	return nil
+}
+
+func (i *inMemoryStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
+	v, ok := i.mem[key]
+	return v, ok, nil
+}
+
+func newInMemoryStore() compose.CheckPointStore {
+	return &inMemoryStore{
+		mem: map[string][]byte{},
+	}
+}
 ```
 
-恢复 Agent 运行需要发生中断的 Agent 实现了 ResumableAgent 接口， Runner 从 CheckPointerStore 读取运行状态并恢复运行，其中 InterruptInfo 和上次运行配置的 EnableStreaming 会作为输入提供给 Agent：Resume 如果向 Agent 传入新信息，可以定义 AgentRunOption，在调用 Runner.Resume 时传入。
+
+
+**Resume:**
+
+调用 Runner 的 Resume 接口，传入中断时的 CheckPointID 可以恢复运行：
+
+```go
+iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents.WithNewInput(nInput)}))
+
+// github.com/cloudwego/eino/adk/runner.go
+func (r *Runner) Resume(ctx context.Context, checkPointID string, **opts ...AgentRunOption**) (*AsyncIterator[*AgentEvent], error)
+```
+
+恢复 Agent 运行需要发生中断的 Agent 实现了 ResumableAgent 接口， Runner 从 CheckPointerStore 读取运行状态并恢复运行，
+
+其中** InterruptInfo 和上次运行配置的 EnableStreaming 会作为输入提供给 Agent**：
+
+Resume如果向 Agent 传入新信息，**可以定义 AgentRunOption，并在调用 Runner.Resume 时传入**。
 
 ```go
 // github.com/cloudwego/eino/adk/interface.go
 type ResumableAgent interface {
     Agent
 
-    Resume(ctx context.Context, info *ResumeInfo, opts ...AgentRunOption) *AsyncIterator[*AgentEvent]
+    Resume(ctx context.Context, info *ResumeInfo, **opts ...AgentRunOption**) *AsyncIterator[*AgentEvent]
 }
 
 // github.com/cloudwego/eino/adk/interrupt.go
@@ -856,9 +896,608 @@ type ResumeInfo struct {
 }
 ```
 
+
+
 # 四、adk example ？？？
 
-### 附：使用.env文件配置环境变量
+## 4.1 `helloworld` ChatModelAgent
+
+7行代码：实现简单对话式ChatModelAgent
+
+```go
+model, err := ark.NewChatModel(...)
+agent, err := adk.NewChatModelAgent(...）
+runner := adk.NewRunner(...)
+
+iter := runner.Query(ctx, "Hello, please introduce yourself. use chinese to answer")
+for {
+		event, ok := iter.Next()
+		msg, err := event.Output.MessageOutput.GetMessage()
+}
+```
+
+
+
+## 4.2 `ChatModelAgent` 
+
+```go
+// 核心一行代码
+runner := adk.NewRunner{
+		...,
+		CheckPointStore: newInMemoryStore(),  // map[string][]byte
+	})
+iter := runner.Query(ctx, "recommend a book to me", adk.WithCheckPointID("1"))
+iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents.WithNewInput(nInput)}))
+```
+
+12行代码：使用 `ChatModelAgent` 带interrupt中断和恢复、本地function tool。
+
+```go
+model, err := ark.NewChatModel(...)
+bookSearchTool, err := utils.InferTool(..., func(ctx, input) (output, err) {...})
+newAskForClarificationTool, err := utils.InferOptionableTool(...,func(..., opts) (output, err) {...}
+agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{..., ToolsConfig: adk.ToolsConfig{...}}
+runner := adk.NewRunner{
+		...,
+		CheckPointStore: newInMemoryStore(),  // map[string][]byte
+	})
+	
+iter := runner.Query(ctx, "recommend a book to me", adk.WithCheckPointID("1"))
+// 交互循环
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+	}
+	
+
+scanner := bufio.NewScanner(os.Stdin)
+scanner.Scan()
+nInput := scanner.Text()
+iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents.WithNewInput(nInput)}))
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+## 4.3 `custom Agent`
+
+7行代码：实现符合ADK定义的自定义Agent
+
+```go
+type MyAgent struct {}
+
+func (m *MyAgent) Name() {...}
+func (m *MyAgent) Description() {...}
+func (m *MyAgent) Run(...) *adk.AsyncIterator[*adk.AgentEvent] {
+	iter, gen := adk.NewAsyncIteratorPair[*adk.AgentEvent]()
+	go func() {
+		defer func() {
+			e := recover()
+			gen.Close()
+		}()
+		// agent run code
+		gen.Send(&adk.AgentEvent{
+			Output: &adk.AgentOutput{
+				MessageOutput: &adk.MessageVariant{
+					IsStreaming: false,
+					Message: &schema.Message{
+						Role:    schema.Assistant,
+						Content: "hello world",
+					},
+					Role: schema.Assistant,
+				},
+			},
+		})
+	}()
+}
+```
+
+## 4.4 workflow：Loop agent + Parallel agent + Sequential agent
+
+```go
+// 核心一行代码
+a, err := adk.NewLoopAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+a, err := adk.NewParallelAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2，a3}...}
+a, err := adk.NewSequentialAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+endSpanFn(ctx, lastMessage)
+```
+
+`Loop` agent（循环agent）：14行代码，loop agent：1个main agent + 1个critique****agent， + cozeloop trace
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent()
+a2, err := adk.NewChatModelAgent()
+a, err := adk.NewLoopAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+
+query := "briefly introduce what a multimodal embedding model is."
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+`Parallel` agent（并行agent）：15行代码，Parallel agent：1个Stock数据收集 agent + 1个News数据收集****agent + 1个社交媒体数据收集****agent， + cozeloop trace
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent() // NewStockDataCollectionAgent
+a2, err := adk.NewChatModelAgent() // NewNewsDataCollectionAgent
+a3, err := adk.NewChatModelAgent() // NewSocialMediaInfoCollectionAgent
+a, err := adk.NewParallelAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2，a3}...}
+
+query := "give me today's market research"
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+`Sequential` (连续的)agent:
+
+```go
+// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+AppendCozeLoopCallbackIfConfigured() 
+
+cm, err := ark.NewChatModel()
+a1, err := adk.NewChatModelAgent() // NewPlanAgent
+a2, err := adk.NewChatModelAgent() // NewWriterAgent
+a, err := adk.NewSequentialAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
+
+query := "give me today's market research"
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+runner := adk.NewRunner()
+
+iter := runner.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+## 4.5 `session`：跨agent传递 data and state（状态）
+
+```go
+// 核心一行代码
+adk.AddSessionValue(ctx, "user-name", in.Name)  // a1
+userName, _ := adk.GetSessionValue(ctx, "user-name") // a2
+```
+
+9行代码：AddSessionValue、GetSessionValue
+
+```go
+adk.AddSessionValue(ctx, "user-name", in.Name)  // a1
+userName, _ := adk.GetSessionValue(ctx, "user-name") // a2
+
+toolA, err := utils.InferTool("tool_a", "set user name", toolAFn)
+toolB, err := utils.InferTool("tool_b", "set user age", toolBFn)
+
+a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+	...
+	ToolsConfig{toolA,toolB},
+	Model: model.NewChatModel()
+}
+
+r := adk.NewRunner(Agent: a)
+
+iter := r.Query(ctx, "my name is Alice, my age is 18")
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+## 4.6 `transfer移交运行`
+
+```go
+// 核心一行代码
+a, err := adk.SetSubAgents(ctx, routerAgent, []adk.Agent{chatAgent, weatherAgent})
+```
+
+12行代码：通过SetSubAgents的的transfer_to_agent 实现控制权的动态选择与转移。
+
+Agent 职责单一 模块化，可独立开发测试，子 Agent 专注各自能力；
+
+
+
+```go
+weatherTool, err := utils.InferTool(...)
+a1, err := adk.NewChatModelAgent(... Tools:weatherTool) // weatherAgent
+a2, err := adk.NewChatModelAgent() // chatAgent
+a3, err := adk.NewChatModelAgent() // routerAgent
+a, err := adk.SetSubAgents(routerAgent, []adk.Agent{chatAgent, weatherAgent}) // SetSubAgents会在 RouterAgent 中注入 transfer_to_agent
+
+runner := adk.NewRunner(a) 
+iter := runner.Query(ctx, "What's the weather in Beijing?") // transfer(转移)到 WeatherAgent
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+
+iter = runner.Query(ctx, "Book me a flight from New York to London tomorrow.") // 无匹配 Agent，RouterAgent 直接回复无法处理
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+```
+
+
+
+## 4.7 `multiagent/plan-execute-replan`
+
+```go
+// 核心一行代码
+entryAgent, err := planexecute.New(ctx, &planexecute.Config{
+		Planner:       planAgent,
+		Executor:      executeAgent,
+		Replanner:     replanAgent,
+		MaxIterations: 20,
+	})
+	
+	ctx, endSpanFn := startSpanFn(ctx, "plan-execute-replan", query)
+	endSpanFn(ctx, lastMessage)
+```
+
+计划-执行-重新计划 agent：
+
+```go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+
+planexecute.NewPlanner(cm) // eino/adk/prebuilt/planexecute
+planAgent, err := agent.NewPlanner(ctx)
+
+planexecute.NewExecutor(cm)
+executeAgent, err := agent.NewExecutor(ctx)
+
+planexecute.NewReplanner(cm)
+replanAgent, err := agent.NewReplanAgent(ctx)
+
+entryAgent, err := planexecute.New(ctx, &planexecute.Config{
+		Planner:       planAgent,
+		Executor:      executeAgent,
+		Replanner:     replanAgent,
+		MaxIterations: 20,
+	})
+	
+	r := adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent: entryAgent,
+	})
+	
+query := `Plan a 3-day trip to Beijing in Next Month. I need flights from New York, hotel recommendations, and must-see attractions.
+Today is 2025-09-09.`
+ctx, endSpanFn := startSpanFn(ctx, "plan-execute-replan", query)
+iter := r.Query(ctx, query)
+for {
+		event, ok := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+## 4.8 `multiagent/supervisor`
+
+```go
+// 核心一行代码
+sv := supervisor.New(Supervisor: sv,SubAgents:  []adk.Agent{searchAgent, mathAgent}
+
+ctx, endSpanFn := startSpanFn(ctx, "Supervisor", query)
+endSpanFn(ctx, lastMessage)
+```
+
+supervisor agent
+
+```go
+traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
+defer traceCloseFn(ctx)
+
+sv, err := adk.NewChatModelAgent()
+
+
+searchAgent, err := buildSearchAgent(ctx)
+mathAgent, err := buildMathAgent(ctx)
+sv := supervisor.New(Supervisor: sv,SubAgents:  []adk.Agent{searchAgent, mathAgent} // adk/prebuilt/supervisor
+
+query := "find US and New York state GDP in 2024. what % of US GDP was New York state?"
+runner := adk.NewRunner(sv)
+
+ctx, endSpanFn := startSpanFn(ctx, "Supervisor", query)
+iter := runner.Query(ctx, query)
+
+for {
+		event, hasEvent := iter.Next()
+		prints.Event(event)
+}
+endSpanFn(ctx, lastMessage)
+```
+
+
+
+## 4.9 `multiagent/layered-supervisor`
+
+```go
+// 核心一行代码
+sv, err := supervisor.New(ctx, &supervisor.Config{
+		Supervisor: sv,
+		SubAgents:  []adk.Agent{searchAgent, mathAgent},
+	})
+
+mathAgent := supervisor.New(ctx, &supervisor.Config{
+		Supervisor: mathA,
+		SubAgents:  []adk.Agent{sa, ma, da},
+	})
+```
+
+
+
+1个supervisor agent下有嵌套1个supervisor subagent
+
+
+
+```go
+sv, err := supervisor.New(ctx, &supervisor.Config{
+		Supervisor: sv,
+		SubAgents:  []adk.Agent{searchAgent, mathAgent},
+	})
+
+mathAgent := supervisor.New(ctx, &supervisor.Config{
+		Supervisor: mathA,
+		SubAgents:  []adk.Agent{sa, ma, da},
+	})
+
+
+query := "find US and New York state GDP in 2024. what % of US GDP was New York state? " +
+		"Then multiply that percentage by 1.589."
+ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
+
+iter := adk.NewRunner(ctx, adk.RunnerConfig{
+		EnableStreaming: true,
+		Agent:           sv,
+	}).Query(ctx, query)
+	
+var lastMessage adk.Message
+for {
+		event, hasEvent := iter.Next()
+		if !hasEvent {
+			break
+		}
+
+		prints.Event(event)
+
+		if event.Output != nil {
+			lastMessage, _, err = adk.GetMessage(event)
+		}
+	}
+
+endSpanFn(ctx, lastMessage)
+
+// wait for all span to be ended
+time.Sleep(5 * time.Second)
+```
+
+
+
+## 4.10 `multiagent/integration-project-manager:` supervisor agent（推荐）
+
+![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_29a24637-29b5-80a9-b46f-d6006b62d853.jpg)
+
+**详情**：[https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw?forceh5=1](https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw?forceh5=1)
+
+`ProjectManagerAgent`：项目开发经理Agent（使用 Supervisor 模式）：根据动态的用户输入，路由并协调多个负责不同维度工作的子智能体开展工作。
+
+1. `ResearchAgent`(调研Agent): 负责调研并生成可行方案。支持中断后从用户处接收额外的上下文信息来提高调研方案生成的准确性。
+1. `CodeAgent`(编码 Agent)：使用知识库工具，召回相关知识作为参考，生成高质量的代码。
+1. `ReviewAgent`(评论 Agent)：使用顺序工作流编排问题分析、评价生成、评价验证三个步骤，对调研结果/编码结果进行评审，给出合理的评价，供项目经理进行决策。
+    1. questionAnalysisAgent
+    1. generateReviewAgent
+    1. reviewValidationAgent
+
+
+```go
+// 核心一行代码
+supervisorAgent, err := supervisor.New(ctx, &supervisor.Config{
+		Supervisor: s,
+		SubAgents:  []adk.Agent{researchAgent, codeAgent, reviewAgent},
+	})
+	
+researchAgent :=  带webSearchTool、newAskForClarificationTool
+codeAgent := 带knowledgeBaseTool（召回RAG知识库）
+reviewAgent := adk.NewSequentialAgent(
+		SubAgents:   []adk.Agent{questionAnalysisAgent, generateReviewAgent, reviewValidationAgent},
+	})
+
+
+runner := adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent:           supervisorAgent,
+		EnableStreaming: true,
+		CheckPointStore: newInMemoryStore(),
+	})
+	
+// 循环中断和恢复
+for !finished {
+		var iter *adk.AsyncIterator[*adk.AgentEvent]
+
+		if !interrupted {
+			iter = runner.Query(ctx, query, adk.WithCheckPointID(checkpointID))
+		} else {
+			scanner := bufio.NewScanner(os.Stdin)
+			fmt.Print("\ninput additional context for web search: ")
+			scanner.Scan()
+			fmt.Println()
+			nInput := scanner.Text()
+
+			iter, err = runner.Resume(ctx, checkpointID, adk.WithToolOptions([]tool.Option{agents.WithNewInput(nInput)}))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		interrupted = false
+
+		for {
+			event, ok := iter.Next()
+			if !ok {
+				if !interrupted {
+					finished = true
+				}
+				break
+			}
+			if event.Err != nil {
+				log.Fatal(event.Err)
+			}
+			if event.Action != nil {
+				if event.Action.Interrupted != nil {
+					interrupted = true
+				}
+				if event.Action.Exit {
+					finished = true
+				}
+			}
+			prints.Event(event)
+		}
+	}
+```
+
+
+
+**核心代码:**
+
+```go
+// Init chat model for agents
+tcm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{..})
+
+// Init research agent
+researchAgent, err := agents.NewResearchAgent(ctx, tcm)
+
+// Init code agent
+codeAgent, err := agents.NewCodeAgent(ctx, tcm)
+
+// Init technical agent
+reviewAgent, err := agents.NewReviewAgent(ctx, tcm)
+ 
+// Init project manager agent
+s, err := agents.NewProjectManagerAgent(ctx, tcm)
+
+
+// Combine agents into ADK supervisor pattern
+// Supervisor: project manager
+// Sub-agents: researcher / coder / reviewer
+supervisorAgent, err := supervisor.New(ctx, &supervisor.Config{
+   Supervisor: s,
+   SubAgents:  []adk.Agent{researchAgent, codeAgent, reviewAgent},
+})
+
+// Init Agent runner
+runner := adk.NewRunner(ctx, adk.RunnerConfig{
+   Agent:           supervisorAgent,
+   EnableStreaming: true,// enable stream output
+   CheckPointStore: newInMemoryStore(),// enable checkpoint for interrupt & resume
+})
+
+query := "please generate a simple ai chat project with python."
+checkpointID := "1"
+
+// Start runner with a new checkpoint id
+iter := runner.Query(ctx, query, adk.WithCheckPointID(checkpointID))
+interrupted := false
+for {
+       event, ok := iter.Next()
+       if !ok {
+          break
+       }
+       if event.Err != nil {
+          log.Fatal(event.Err)
+       }
+       if event.Action != nil && event.Action.Interrupted != nil {
+          interrupted = true
+       }
+       prints.Event(event)
+    }
+
+    if !interrupted {
+       return
+}
+
+// interrupt and ask for additional user context
+    scanner := bufio.NewScanner(os.Stdin)
+    fmt.Print("\ninput additional context for web search: ")
+    scanner.Scan()
+    fmt.Println()
+    nInput := scanner.Text()
+
+// Resume by checkpoint id, with additional user context injection
+    iter, err = runner.Resume(ctx, checkpointID, adk.WithToolOptions([]tool.Option{agents.WithNewInput(nInput)}))
+    if err != nil {
+       log.Fatal(err)
+    }
+    for {
+       event, ok := iter.Next()
+       if !ok {
+          break
+       }
+       if event.Err != nil {
+          log.Fatal(event.Err)
+       }
+       prints.Event(event)
+    }
+}
+```
+
+
+
+如果不用Eion，从0开发：
+
+| **设计点** | **基于 Eino ADK 开发** | **传统开发模式** | 
+| --- | --- | --- | 
+| **Agent 抽象** | 统一定义，职责独立，代码整洁，便于各 Agent 分头开发 | 没有统一定义，团队协作开发效率差，后期维护成本高 | 
+| **输入输出** | 有统一定义，全部基于事件驱动运行过程通过 iterator 透出，所见即所得 | 没有统一定义，输入输出混乱运行过程只能手动加日志，不利于调试 | 
+| **Agent 协作** | 框架自动传递上下文 | 通过代码手动传递上下文 | 
+| **中断恢复能力** | 仅需在 Runner 中注册 CheckPointStore 提供断点数据存储介质 | 需要从零开始实现，解决序列化与反序列化、状态存储与恢复等问题 | 
+| **Agent 模式** | 多种成熟模式开箱即用 | 需要从零开始实现 | 
+
+
+
+## 附：加载.env的方法
+
+### 方案1：使用.env文件配置环境变量
 
 1. vscode 安装 `mikestead.dotenv` 扩展：支持.env .env.local .env.example等常见文件名的语法高亮。但不支持自动加载环境变量。
 1. 项目根目录创建.env文件，务必将.env添加到.gitignore(否则ak/sk泄露到gitlab/github)。在.env中配置：
@@ -921,460 +1560,81 @@ type ResumeInfo struct {
     }
     ```
 1. command + shift + D启动调试，默认会加载.env。F5继续调试、F11单步进入；
-### 4.1 `helloworld` ChatModelAgent
 
-7行代码：实现简单对话式ChatModelAgent
+
+go test加载.env：
+
+.vscode/settings.json
 
 ```go
-model, err := ark.NewChatModel(...)
-agent, err := adk.NewChatModelAgent(...）
-runner := adk.NewRunner(...)
+｛
+“go.testEnvFile”:"${workspaceFolder}/.env"
+｝
+```
 
-iter := runner.Query(ctx, "Hello, please introduce yourself. use chinese to answer")
-for {
-		event, ok := iter.Next()
-		msg, err := event.Output.MessageOutput.GetMessage()
+然后直接vscode中的 run test
+
+
+
+**上述为调试/运行场景，如果需要sudo运行：**
+
+**Terminal-Run Task**：使用VSCode的**Tasks + 环境配置**
+
+.vscode/tasks.json：在 VSCode 内用 **Terminal-Run Task**即可执行。**等价于在终端里执行其中的command。**
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run hello.go with sudo",
+      "type": "shell",
+      "command": "export $(grep -v '^#' .env | xargs) && sudo -E go run hello.go"
+      "options": {
+        "env": {
+          "GO_ENV": "development"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
 }
 ```
 
+### 方法二：direnv工具 + sudo -E
 
+1. 安装 `direnv`
+    ```shell
+    sudo apt install direnv    # Ubuntu/Debian
+    # 或
+    brew install direnv        # macOS
+    ```
+1. 在项目根目录创建 `.envrc`
+    ```shell
+    export $(grep -v '^#' .env | xargs)
+    ```
+1. 启用 `direnv`:` direnv allow`。每次进入项目目录时，`.env` 中的变量都会被自动加载到当前 shell。
+1. 在 VSCode 终端中运行：`**-E**`** 表示保留当前环境变量（包括**`**.env**`** 中的变量）。(否则，切换到sudo后前面source .env的环境变量丢失了)**
+    ```shell
+    sudo -E go run h.go
+    ```
+### 方法三：godotenv package
 
-### 4.2 `ChatModelAgent` 
-
-12行代码：使用 `ChatModelAgent` 带interrupt中断和恢复、本地function tool。
-
-```go
-model, err := ark.NewChatModel(...)
-bookSearchTool, err := utils.InferTool(..., func(ctx, input) (output, err) {...})
-newAskForClarificationTool, err := utils.InferOptionableTool(...,func(..., opts) (output, err) {...}
-agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{..., ToolsConfig: adk.ToolsConfig{...}}
-runner := adk.NewRunner{
-		...,
-		CheckPointStore: newInMemoryStore(),  // map[string][]byte
-	})
-	
-iter := runner.Query(ctx, "recommend a book to me", adk.WithCheckPointID("1"))
-// 交互循环
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
+```shell
+import "github.com/joho/godotenv"
+err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found or failed to load")
 	}
-	
 
-scanner := bufio.NewScanner(os.Stdin)
-scanner.Scan()
-nInput := scanner.Text()
-iter, err := runner.Resume(ctx, "1", adk.WithToolOptions([]tool.Option{subagents.WithNewInput(nInput)}))
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
+	// 测试读取变量
+	apiKey := os.Getenv("API_KEY")
+	fmt.Println("API_KEY:", apiKey)
 ```
 
 
 
-### `custom Agent`
-
-7行代码：实现符合ADK定义的自定义Agent
-
-```go
-type MyAgent struct {}
-
-func (m *MyAgent) Name() {...}
-func (m *MyAgent) Description() {...}
-func (m *MyAgent) Run(...) *adk.AsyncIterator[*adk.AgentEvent] {
-	iter, gen := adk.NewAsyncIteratorPair[*adk.AgentEvent]()
-	go func() {
-		defer func() {
-			e := recover()
-			gen.Close()
-		}()
-		// agent run code
-		gen.Send(&adk.AgentEvent{
-			Output: &adk.AgentOutput{
-				MessageOutput: &adk.MessageVariant{
-					IsStreaming: false,
-					Message: &schema.Message{
-						Role:    schema.Assistant,
-						Content: "hello world",
-					},
-					Role: schema.Assistant,
-				},
-			},
-		})
-	}()
-}
-```
-
-
-
-### workflow：Loop agent + Parallel agent + Sequential agent
-
-`Loop` agent（循环agent）：14行代码，loop agent：1个main agent + 1个critique****agent， + cozeloop trace
-
-```go
-// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
-traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
-defer traceCloseFn(ctx)
-AppendCozeLoopCallbackIfConfigured() 
-
-cm, err := ark.NewChatModel()
-a1, err := adk.NewChatModelAgent()
-a2, err := adk.NewChatModelAgent()
-a, err := adk.NewLoopAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
-
-query := "briefly introduce what a multimodal embedding model is."
-ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
-runner := adk.NewRunner()
-
-iter := runner.Query(ctx, query)
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-endSpanFn(ctx, lastMessage)
-```
-
-
-
-`Parallel` agent（平行agent）：15行代码，Parallel agent：1个Stock数据收集 agent + 1个News数据收集****agent + 1个社交媒体数据收集****agent， + cozeloop trace
-
-```go
-// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
-traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
-defer traceCloseFn(ctx)
-AppendCozeLoopCallbackIfConfigured() 
-
-cm, err := ark.NewChatModel()
-a1, err := adk.NewChatModelAgent() // NewStockDataCollectionAgent
-a2, err := adk.NewChatModelAgent() // NewNewsDataCollectionAgent
-a3, err := adk.NewChatModelAgent() // NewSocialMediaInfoCollectionAgent
-a, err := adk.NewParallelAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2，a3}...}
-
-query := "give me today's market research"
-ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
-runner := adk.NewRunner()
-
-iter := runner.Query(ctx, query)
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-endSpanFn(ctx, lastMessage)
-```
-
-
-
-`Sequential` (连续的)agent:
-
-```go
-// cozeloop trace: eino-ext/callbacks/cozeloop   coze-dev/cozeloop-go
-traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
-defer traceCloseFn(ctx)
-AppendCozeLoopCallbackIfConfigured() 
-
-cm, err := ark.NewChatModel()
-a1, err := adk.NewChatModelAgent() // NewPlanAgent
-a2, err := adk.NewChatModelAgent() // NewWriterAgent
-a, err := adk.NewSequentialAgent(ctx, &adk.LoopAgentConfig{... SubAgents:{[]adk.Agent{a1,a2}...}
-
-query := "give me today's market research"
-ctx, endSpanFn := startSpanFn(ctx, "layered-supervisor", query)
-runner := adk.NewRunner()
-
-iter := runner.Query(ctx, query)
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-endSpanFn(ctx, lastMessage)
-```
-
-
-
-### `session`：跨agent传递 data and state（状态）
-
-9行代码：AddSessionValue、GetSessionValue
-
-```go
-adk.AddSessionValue(ctx, "user-name", in.Name)  // a1
-userName, _ := adk.GetSessionValue(ctx, "user-name") // a2
-
-toolA, err := utils.InferTool("tool_a", "set user name", toolAFn)
-toolB, err := utils.InferTool("tool_b", "set user age", toolBFn)
-
-a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-	...
-	ToolsConfig{toolA,toolB},
-	Model: model.NewChatModel()
-}
-
-r := adk.NewRunner(Agent: a)
-
-iter := r.Query(ctx, "my name is Alice, my age is 18")
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-```
-
-
-
-### `transfer移交运行`
-
-12行代码：通过SetSubAgents的的transfer_to_agent 实现控制权的动态选择与转移。
-
-Agent 职责单一 模块化，可独立开发测试，子 Agent 专注各自能力；
-
-```go
-weatherTool, err := utils.InferTool(...)
-a1, err := adk.NewChatModelAgent(... Tools:weatherTool) // weatherAgent
-a2, err := adk.NewChatModelAgent() // chatAgent
-a3, err := adk.NewChatModelAgent() // routerAgent
-a, err := adk.SetSubAgents(routerAgent, []adk.Agent{chatAgent, weatherAgent}) // SetSubAgents会在 RouterAgent 中注入 transfer_to_agent
-
-runner := adk.NewRunner(a)
-iter := runner.Query(ctx, "What's the weather in Beijing?") // transfer(转移)到 WeatherAgent
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-
-iter = runner.Query(ctx, "Book me a flight from New York to London tomorrow.") // 无匹配 Agent，RouterAgent 直接回复无法处理
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-```
-
-
-
-### `multiagent/plan-execute-replan`
-
-计划-执行-重新计划 agent：
-
-```go
-traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
-defer traceCloseFn(ctx)
-
-planexecute.NewPlanner(cm) // eino/adk/prebuilt/planexecute
-planAgent, err := agent.NewPlanner(ctx)
-
-planexecute.NewExecutor(cm)
-executeAgent, err := agent.NewExecutor(ctx)
-
-planexecute.NewReplanner(cm)
-replanAgent, err := agent.NewReplanAgent(ctx)
-
-entryAgent, err := planexecute.New(ctx, &planexecute.Config{
-		Planner:       planAgent,
-		Executor:      executeAgent,
-		Replanner:     replanAgent,
-		MaxIterations: 20,
-	})
-	
-	r := adk.NewRunner(ctx, adk.RunnerConfig{
-		Agent: entryAgent,
-	})
-	
-query := `Plan a 3-day trip to Beijing in Next Month. I need flights from New York, hotel recommendations, and must-see attractions.
-Today is 2025-09-09.`
-ctx, endSpanFn := startSpanFn(ctx, "plan-execute-replan", query)
-iter := r.Query(ctx, query)
-for {
-		event, ok := iter.Next()
-		prints.Event(event)
-}
-endSpanFn(ctx, lastMessage)
-```
-
-
-
-### `multiagent/supervisor`
-
-supervisor agent
-
-```go
-traceCloseFn, startSpanFn := trace.AppendCozeLoopCallbackIfConfigured(ctx)
-defer traceCloseFn(ctx)
-
-sv, err := adk.NewChatModelAgent()
-
-
-searchAgent, err := buildSearchAgent(ctx)
-mathAgent, err := buildMathAgent(ctx)
-sv := supervisor.New(Supervisor: sv,SubAgents:  []adk.Agent{searchAgent, mathAgent} // adk/prebuilt/supervisor
-
-query := "find US and New York state GDP in 2024. what % of US GDP was New York state?"
-runner := adk.NewRunner(sv)
-
-ctx, endSpanFn := startSpanFn(ctx, "Supervisor", query)
-iter := runner.Query(ctx, query)
-
-for {
-		event, hasEvent := iter.Next()
-		prints.Event(event)
-}
-endSpanFn(ctx, lastMessage)
-```
-
-
-
-### `multiagent/layered-supervisor`
-
-another example of supervisor agent, which set a supervisor agent as sub-agent of another supervisor agent
-
-
-
-### 推荐： `multiagent/integration-project-manager:`using supervisor agent
-
-[https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw?forceh5=1](https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw?forceh5=1)
-
-**项目开发经理智能体：**面向多方面管理协同的场景：
-
-- Project Manager Agent：项目经理智能体，整体使用 Supervisor 模式，各 Agent 的功能如下：
-    - `ResearchAgent`：调研 Agent，负责调研并生成可行方案，支持中断后从用户处接收额外的上下文信息来提高调研方案生成的准确性。
-    - `CodeAgent`：编码 Agent，使用知识库工具，召回相关知识作为参考，生成高质量的代码。
-    - `ReviewAgent`：评论 Agent，使用顺序工作流编排问题分析、评价生成、评价验证三个步骤，对调研结果 / 编码结果进行评审，给出合理的评价，供项目经理进行决策。
-    - `ProjectManagerAgent`：项目经理 Agent，根据动态的用户输入，路由并协调多个负责不同维度工作的子智能体开展工作。
-- 该 Agent 可能的工作场景为：
-    - **从零开始实现项目**：项目经理从需求入手，经由调研、编码、评论三个 Agent 工作，最终完成项目交付。
-    - **对已有项目的完善**：项目经理从评论 Agent 获得项目仍旧需要完善的功能点，交由编码 Agent 进行实现，再交由评论 Agent 对修改后的代码进行评审。
-    - **开展技术调研**：项目经理要求调研 Agent 生成技术调研报告，然后由评论 Agent 给出评审意见。调用方结合返回的技术调研报告和评审意见，决定后续动作。
-![](/images/24724637-29b5-80af-a6a1-e96b72202555/image_29a24637-29b5-80a9-b46f-d6006b62d853.jpg)
-
-
-
-该示例的设计涵盖了文中介绍的大部分概念，您可以基于示例回顾之前的提到的种种设计理念。另外，请试想普通开发模式下如何完成该示例的编写，ADK 的优势便立刻凸显了出来：
-
-| **设计点** | **传统开发模式** | **基于 Eino ADK 开发** | 
-| --- | --- | --- | 
-| **Agent 抽象** | 没有统一定义，团队协作开发效率差，后期维护成本高 | 统一定义，职责独立，代码整洁，便于各 Agent 分头开发 | 
-| **输入输出** | 没有统一定义，输入输出混乱运行过程只能手动加日志，不利于调试 | 有统一定义，全部基于事件驱动运行过程通过 iterator 透出，所见即所得 | 
-| **Agent 协作** | 通过代码手动传递上下文 | 框架自动传递上下文 | 
-| **中断恢复能力** | 需要从零开始实现，解决序列化与反序列化、状态存储与恢复等问题 | 仅需在 Runner 中注册 CheckPointStore 提供断点数据存储介质 | 
-| **Agent 模式** | 需要从零开始实现 | 多种成熟模式开箱即用 | 
-
-核心代码如下，完整代码详见 Eino-Examples 项目中提供的**源码**：
-
-```go
-func main() {
-    ctx := context.Background()
-
-// Init chat model for agents
-    tcm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-       APIKey:  os.Getenv("OPENAI_API_KEY"),
-       Model:   os.Getenv("OPENAI_MODEL"),
-       BaseURL: os.Getenv("OPENAI_BASE_URL"),
-       ByAzure: func() bool {
-          return os.Getenv("OPENAI_BY_AZURE") == "true"
-       }(),
-    })
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Init research agent
-    researchAgent, err := agents.NewResearchAgent(ctx, tcm)
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Init code agent
-    codeAgent, err := agents.NewCodeAgent(ctx, tcm)
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Init technical agent
-    reviewAgent, err := agents.NewReviewAgent(ctx, tcm)
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Init project manager agent
-    s, err := agents.NewProjectManagerAgent(ctx, tcm)
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Combine agents into ADK supervisor pattern
-// Supervisor: project manager
-// Sub-agents: researcher / coder / reviewer
-    supervisorAgent, err := supervisor.New(ctx, &supervisor.Config{
-       Supervisor: s,
-       SubAgents:  []adk.Agent{researchAgent, codeAgent, reviewAgent},
-    })
-    if err != nil {
-       log.Fatal(err)
-    }
-
-// Init Agent runner
-    runner := adk.NewRunner(ctx, adk.RunnerConfig{
-       Agent:           supervisorAgent,
-       EnableStreaming: true,// enable stream output
-       CheckPointStore: newInMemoryStore(),// enable checkpoint for interrupt & resume
-    })
-
-// Replace it with your own query
-    query := "please generate a simple ai chat project with python."
-    checkpointID := "1"
-
-// Start runner with a new checkpoint id
-    iter := runner.Query(ctx, query, adk.WithCheckPointID(checkpointID))
-    interrupted := false
-    for {
-       event, ok := iter.Next()
-       if !ok {
-          break
-       }
-       if event.Err != nil {
-          log.Fatal(event.Err)
-       }
-       if event.Action != nil && event.Action.Interrupted != nil {
-          interrupted = true
-       }
-       prints.Event(event)
-    }
-
-    if !interrupted {
-       return
-    }
-
-// interrupt and ask for additional user context
-    scanner := bufio.NewScanner(os.Stdin)
-    fmt.Print("\ninput additional context for web search: ")
-    scanner.Scan()
-    fmt.Println()
-    nInput := scanner.Text()
-
-// Resume by checkpoint id, with additional user context injection
-    iter, err = runner.Resume(ctx, checkpointID, adk.WithToolOptions([]tool.Option{agents.WithNewInput(nInput)}))
-    if err != nil {
-       log.Fatal(err)
-    }
-    for {
-       event, ok := iter.Next()
-       if !ok {
-          break
-       }
-       if event.Err != nil {
-          log.Fatal(event.Err)
-       }
-       prints.Event(event)
-    }
-}
-```
-
-
-
-### `common`
-
-utils
-
-
-
-### 附：老版本 Eino React Agent（基于compose.Graph）
+## 附：老版本 Eino React Agent（基于compose.Graph）
 
 > 王德政: 
 eino flow/下的react agent 和adk/ 下的 react agent基本没区别，都是 react 模式；
