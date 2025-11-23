@@ -17,8 +17,12 @@ type Message struct {
     Role    RoleType `json:"role"`           // 消息角色
     Content string   `json:"content"`        // 文本内容
     
-    // 多模态内容（优先级高于Content）
-    MultiContent []ChatMessagePart `json:"multi_content,omitempty"`
+    // UserInputMultiContent 用来存储用户输入的多模态数据，支持文本、图片、音频、视频、文件
+    // 使用此字段时限制模型角色为User
+    UserInputMultiContent []MessageInputPart
+    // AssistantGenMultiContent 用来承接模型输出的多模态数据，支持文本、图片、音频、视频
+    // 使用此字段时限制模型角色为Assistant
+    AssistantGenMultiContent []MessageOutputPart
     
     Name string `json:"name,omitempty"`      // 消息名称
     

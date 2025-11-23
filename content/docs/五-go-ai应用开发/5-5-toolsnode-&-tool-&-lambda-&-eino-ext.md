@@ -468,64 +468,19 @@ fmt.Println("==============")
 
 
 
-1. `duckduckgo` search tool：实现了`tool.InvokableTool` 接口，通过 DuckDuckGo 搜索引擎进行网络搜索。DuckDuckGo 是一个注重隐私的搜索引擎，不会追踪用户的搜索行为，**无需 api key 鉴权即可直接使用**。
+1. `duckduckgo` search tool：实现了`tool.InvokableTool` 接口，通过 DuckDuckGo 搜索引擎(ddgsearch)进行网络搜索。DuckDuckGo 是一个注重隐私的搜索引擎，不会追踪用户的搜索行为，**无需 api key 鉴权即可直接使用**。
 ```go
  import (
-		 "github.com/cloudwego/eino-ext/components/tool/duckduckgo"
+		 "github.com/cloudwego/eino-ext/components/tool/duckduckgo/v2"
     "github.com/cloudwego/eino-ext/components/tool/duckduckgo/ddgsearch"
 )
 
-ctx := context.Background()
-
-// **init search client**
-tool, err := duckduckgo.NewTool(ctx, &duckduckgo.Config{
-	ToolName:    "duckduckgo_search",     // 工具名称
-   ToolDesc:    "search web for information by duckduckgo", // 工具描述
-   Region:     ddgsearch.RegionCN, // 搜索地区
-   MaxResults: 10, // 每页结果数量
-   SafeSearch:  ddgsearch.SafeSearchOff, // 安全搜索级别
-   TimeRange:   ddgsearch.TimeRangeAll,  // 时间范围
-   
-   DDGConfig: &ddgsearch.Config{  // DuckDuckGo 配置
-	   Timeout:    10 * time.Second,
-	   Cache:      true,
-	   MaxRetries: 5,
-   },
-})
-if err != nil {
-   log.Fatalf("NewTool of duckduckgo failed, err=%v", err)
-}
-
-// 搜索参数
-searchReq := &duckduckgo.SearchRequest{
-    Query: "Golang programming development", // 搜索关键词
-    Page:  1, // 页码
-}
-
-jsonReq, err := json.Marshal(searchReq)
-if err != nil {
-        log.Fatalf("Marshal of search request failed, err=%v", err)
-}
-
-// Execute search
-resp, err := tool.InvokableRun(ctx, string(jsonReq))
-if err != nil {
-   log.Fatalf("Search of duckduckgo failed, err=%v", err)
-}
-
-var searchResp duckduckgo.SearchResponse
-  if err := json.Unmarshal([]byte(resp), &searchResp); err != nil {
-    log.Fatalf("Unmarshal of search response failed, err=%v", err)
-}
-
-// Print results
-fmt.Println("Search Results:")
-fmt.Println("==============")
-for i, result := range searchResp.Results {
-  fmt.Printf("\n%d. Title: %s\n", i+1, result.Title)
-  fmt.Printf("   Link: %s\n", result.Link)
-  fmt.Printf("   Description: %s\n", result.Description)
-}
+searchTool, err := duckduckgo.NewTextSearchTool(context.Background(), &duckduckgo.Config{ // All of these parameters are default values, for demonstration purposes only
+		Region:     duckduckgo.RegionWT,
+		Timeout:    10,  // Timeout specifies the maximum duration for a single request.
+		MaxResults: 10,  // MaxResults limits the number of results returned
+	}
+)
 ```
 
 

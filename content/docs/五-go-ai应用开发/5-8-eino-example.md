@@ -612,7 +612,7 @@ func main(){
 
 # 六、adk/
 
-详见：[四、adk example ？？？](https://www.notion.so/2472463729b580afa6a1e96b72202555#2472463729b580caa58efb2a949867de) 
+详见：[四、adk example](https://www.notion.so/2472463729b580afa6a1e96b72202555#2472463729b580caa58efb2a949867de) 
 
 
 

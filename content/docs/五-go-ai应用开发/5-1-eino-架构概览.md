@@ -13,6 +13,10 @@ weight: 5001
 
 [https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw](https://mp.weixin.qq.com/s/p_QqDN6m2anHAE97P2Q2bw)
 
+
+
+模型：[https://www.swebench.com/index.html](https://www.swebench.com/index.html)
+
 【如何构建 MultiAgent——Eino adk 与 a2a 实践 - 王德政-哔哩哔哩】 [https://b23.tv/3tWK23w](https://b23.tv/3tWK23w)
 
 > 🎯 核心洞察：AI应用的本质是围绕大模型的信息流：Input（原始信息） → Process（大模型） → Output(最终信息)
