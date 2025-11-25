@@ -114,9 +114,9 @@ map[string]*schema.ParameterInfo{
 }
 ```
 
-方式2：**openapi3.Schema。****一般是直接使用**`**utils.GoStruct2ParamsOneOf**`** 来构建ToolInfo 或 直接用 **`**utils.InferTool()**`** 直接构建 tool**，而不由开发者自行直接调用构造此结构体。
+Eino v0.6开始已完成弃用： ~~方式2：~~~~**openapi3.Schema。**~~~~**一般是直接使用**~~~~`**utils.GoStruct2ParamsOneOf**`~~~~** 来构建ToolInfo 或 直接用 **~~~~`**utils.InferTool()**`~~~~** 直接构建 tool**~~~~，而不由开发者自行直接调用构造此结构体。~~
 
-Eino 提供了在结构体中通过 go tag 描述参数约束的方式，并提供了 GoStruct2ParamsOneOf 方法来生成一个 struct 的参数约束:
+~~Eino 提供了在结构体中通过 go tag 描述参数约束的方式，并提供了 GoStruct2ParamsOneOf 方法来生成一个 struct 的参数约束:~~
 
 ```go
 func GoStruct2ParamsOneOf[T any](opts ...Option) (*schema.ParamsOneOf, error)
@@ -137,7 +137,7 @@ type User struct {
 params, err := utils.GoStruct2ParamsOneOf[User]()
 ```
 
-如果 tool 是对一些 openapi 的封装，则可以通过 导出openapi.json文件来生成。
+~~如果 tool 是对一些 openapi 的封装，则可以通过 导出openapi.json文件来生成。~~
 
 
 
@@ -824,7 +824,53 @@ func getAddTodoTool() tool.InvokableTool {
 
 ### **2. 直接实现 InvokableTool interface**
 
-对于需要更多自定义逻辑的场景，可以通过手动实现 InvokableTool interface 来创建：
+对于需要更多自定义逻辑的场景，4步手动实现 InvokableTool interface 来创建：
+
+1. **定义1个struct**
+1. **实现Info方法，返回一个*schema.ToolInfo，用来告诉模型怎么构造参数。**
+1. **实现InvokableRun方法，自行反序列化入参的argumentsInJSON，返回string。**
+1. **实现NewxxxTool工厂方法，返回1个struct 实例。**
+    备注：由于大模型给出的 function call 参数始终是一个 string，对应到 Eino 框架中，tool 的调用参数入参也就是一个序列化成 string 的 json。因此，这种方式需要开发者**自行在InvokableRun内部处理参数的反序列化**，并且**调用的结果也用 string 的方式返回**。
+```go
+// eino/schema/tool.go
+type ToolInfo struct {  // **告诉大模型如何具体构造符合约束的function call参数**
+    // 工具的唯一名称，用于清晰地表达其用途
+    Name string
+    // 用于告诉模型如何/何时/为什么使用这个工具；可以在描述中包含少量示例
+    Desc string
+    // 工具接受的参数定义，可以通过两种方式描述：
+    // 1. 使用 ParameterInfo：schema.NewParamsOneOfByParams(params)
+    // 2. 使用 OpenAPIV3：schema.NewParamsOneOfByOpenAPIV3(openAPIV3)
+    *ParamsOneOf
+}
+
+// eino/compose/tool/interface.go
+// 基础工具interface，提供工具信息
+type BaseTool interface {
+		// 获取工具的描述信息*schema.ToolInfo，用于提供给大模型
+    Info(ctx context.Context) (*schema.ToolInfo, error)
+}
+
+// 支持同步调用的工具interface
+type InvokableTool interface {
+    BaseTool
+    // 同步执行工具
+    // 参数：上下文对象，用于传递请求级别的信息和Callback Manager，JSON 格式的参数字符串、工具执行的选项
+    // 返回值：string工具调用结果
+    InvokableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (string, error)
+}
+
+// 支持流式输出的工具interface
+type StreamableTool interface {
+    BaseTool
+    // 流式执行工具
+    // 参数：同上
+    // 返回值：*schema.StreamReader[string]流式工具调用结果
+    StreamableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (*schema.StreamReader[string], error)
+}
+```
+
+
 
 ```go
 import (
@@ -834,29 +880,71 @@ import (
     "github.com/cloudwego/eino/schema"
 )
 
-type ListTodoTool struct {}
+// step1 定义struct
+type submitResultTool struct {}
 
-func (lt *ListTodoTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
-    return &schema.ToolInfo{
-        Name: "list_todo",
-        Desc: "List all todo items",
-        ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-            "finished": {
-                Desc:     "filter todo items if finished",
-                Type:     schema.Boolean,
-                Required: false,
-            },
-        }),
-    }, nil
+// step2 Info方法返回ToolInfo，告诉模型怎么构造fc参数
+func (t *submitResultTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
+	return &schema.ToolInfo{
+		Name: "submit_result",
+		Desc: "When all steps are completed without obvious problems, call this tool to end the task and report the final execution results to the user.",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+			"is_success": {
+				Type: schema.Boolean,
+				Desc: "success or not，true/false",
+			},
+			"result": {
+				Type: schema.String,
+				Desc: "Task execution process and result",
+			},
+		}),
+	}, nil
 }
 
-func (lt *ListTodoTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
-    // Mock调用逻辑
-    return `{"todos": [{"id": "1", "content": "在2024年12月10日之前完成Eino项目演示文稿的准备工作", "started_at": 1717401600, "deadline": 1717488000, "done": false}]}`, nil
+
+
+// step3 实现InvokableRun执行fc
+func (t *submitResultTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
+	args := &generic.SubmitResult{}
+	if err := sonic.Unmarshal([]byte(argumentsInJSON), args); err != nil {
+		return "", err
+	}
+
+	plan, _ := utils.GetSessionValue[*generic.Plan](ctx, planexecute.PlanSessionKey)
+	steps, _ := utils.GetSessionValue[[]planexecute.ExecutedStep](ctx, planexecute.ExecutedStepsSessionKey)
+
+	var fullPlan []*generic.FullPlan
+	for i, step := range steps {
+		fullPlan = append(fullPlan, &generic.FullPlan{
+			TaskID: i + 1,
+			Status: generic.PlanStatusDone,
+			Desc:   step.Step,
+			ExecResult: &generic.SubmitResult{
+				IsSuccess: utils.PtrOf(true),
+				Result:    step.Result,
+			},
+		})
+	}
+
+	for i := len(steps); i < len(plan.Steps); i++ {
+		step := plan.Steps[i]
+		fullPlan = append(fullPlan, &generic.FullPlan{
+			TaskID: len(fullPlan) + 1,
+			Status: generic.PlanStatusSkipped,
+			Desc:   step.Desc,
+		})
+	}
+
+	wd, ok := params.GetTypedContextParams[string](ctx, params.WorkDirSessionKey)
+	if !ok {
+		return "", fmt.Errorf("work dir not found")
+	}
+}
+
+func NewToolSubmitResult() tool.InvokableTool {
+	return &submitResultTool{}
 }
 ```
-
-备注：由于大模型给出的 function call 参数始终是一个 string，对应到 Eino 框架中，tool 的调用参数入参也就是一个序列化成 string 的 json。因此，这种方式需要开发者自行处理参数的反序列化，并且调用的结果也用 string 的方式返回。
 
 
 

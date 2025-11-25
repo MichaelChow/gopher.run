@@ -17,8 +17,11 @@ weight: 5000
 - [5.4 components文本语义处理类](5-4-components文本语义处理类/)
 - [5.5 ToolsNode & Tool & Lambda & eino-ext](5-5-toolsnode-&-tool-&-lambda-&-eino-ext/)
 - [5.6 compose编排](5-6-compose编排/)
-- [5.7 adk](5-7-adk/)
-- [5.8 eino-example](5-8-eino-example/)
+- [5.7 adk基础](5-7-adk基础/)
+- [5.8 adk进阶](5-8-adk进阶/)
+- [5.9 eino-example](5-9-eino-example/)
+
+
 
 
 

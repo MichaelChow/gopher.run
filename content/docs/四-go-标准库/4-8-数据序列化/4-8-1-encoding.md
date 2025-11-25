@@ -35,7 +35,7 @@ type Movie struct {
 	Year int `json:"released"`
 	// 额外的omitempty选项，表示当Go语言结构体成员为空或零值时不生成该JSON对象（这里false为零值）。
 	// 即Marshal的json串中"Casablanca"由于其为零值fasle，所以没有Color字段
-	Color  bool `json:"color,omitempty"`
+	Color  bool `json:"color,omitempty"` // 中间逗号不能打空格
 	Actors []string
 }
 ```

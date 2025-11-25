@@ -1,11 +1,11 @@
 ---
-title: "5.8 eino-example"
+title: "5.9 eino-example"
 date: 2025-07-03T13:48:00Z
 draft: false
-weight: 5008
+weight: 5009
 ---
 
-# 5.8 eino-example
+# 5.9 eino-example
 
 
 
